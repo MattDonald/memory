@@ -259,7 +259,7 @@
   const TIMING_PCT = 0.35;          // allowed timing error, as a share of the gap between notes
   const TIMING_MIN_MS = 50;         // but never tighter than this
   const RETRY_GAP_BEATS = 1.5;      // after a mistake, presses are ignored until the player has been quiet this long (in beats), so a pattern carried on after a slip can't restart itself by accident
-  const DEBUG = true;               // true = log every press and the pattern, to the console and a panel on screen. Set false before publishing.
+  const DEBUG = false;               // true = log every press and the pattern, to the console and a panel on screen. Set false before publishing.
   const END_FADE_MS = 15;            // quick fade-out over the end of every sample, so it never stops on a click (0 = off)
   const SHAKE_THRESHOLD = 28;       // phone shake to change sounds: how hard a shake must be (lower = more sensitive; walking is well under 15)
   const SHAKE_COOLDOWN_MS = 900;    // ...and the least time between two shakes
