@@ -236,7 +236,7 @@
 <ul>
 <li><span class="mg-ico" data-from="mg-visual"></span>Flash the pads while the pattern plays.</li>
 <li><span class="mg-ico" data-from="mg-metro"></span>A click on the beat during a game.</li>
-<li><span class="mg-ico" data-from="mg-cycle"></span>Switch the sound bank, between games. On a phone, allow motion access when asked, then shake to switch.</li>
+<li><span class="mg-ico" data-from="mg-cycle"></span>Switch the sound bank, between games. On a phone, tap it to allow motion access, then shake to switch.</li>
 <li><span class="mg-ico" data-from="mg-midi"></span>Download the last pattern as a MIDI file.</li>
 </ul>
 </div></dialog>
@@ -894,8 +894,11 @@
   });
 
   // ---- shake the phone to change the sounds (touch screens only) ----
-  // The first tap on 'cycle' asks for motion access (iOS shows its own prompt, Android just allows it). After that, a shake does the same as the button.
-  let shakeAsked = false, shakeOn = false, gotMotion = false, lastShake = -Infinity, lastAcc = null;
+  // On a touch screen the cycle button never changes the bank itself: the first tap asks for motion access (iOS shows its own prompt,
+  // Android just allows it), and from then on only a shake changes it. If shake can't be used (blocked, or no motion data), the button works as a plain cycle again.
+  let shake = 'unasked';        // unasked -> pending (waiting for the prompt) -> on, or failed
+  let gotMotion = false, lastShake = -Infinity, lastAcc = null;
+  const canShake = tapScreen && typeof DeviceMotionEvent !== 'undefined';
   function onMotion(e) {
     const a = e.accelerationIncludingGravity;
     if (!a || a.x == null) return;
@@ -911,23 +914,29 @@
     lastAcc = { x: a.x, y: a.y, z: a.z };
   }
   function enableShake() {
-    shakeOn = true;
+    shake = 'on';
     window.addEventListener('devicemotion', onMotion, { signal });
-    say('shake your phone to change sounds', VERB + ' to start');
-    setTimeout(() => { if (!gotMotion) { shakeOn = false; window.removeEventListener('devicemotion', onMotion); say('shake isn’t available here', VERB + ' to start'); } }, 2500);   // no motion events arrived: the browser or the page's frame isn't allowing them
+    say('shake to change sounds', VERB + ' to start');
+    setTimeout(() => {          // no motion events arrived: the browser or the page's frame isn't allowing them
+      if (gotMotion) return;
+      shake = 'failed'; window.removeEventListener('devicemotion', onMotion);
+      say('no shake here: tap to cycle', VERB + ' to start');
+    }, 2500);
   }
   function askForShake() {      // must run straight from the tap: iOS only shows its prompt from a user gesture
-    if (!tapScreen || shakeAsked || shakeOn || typeof DeviceMotionEvent === 'undefined') return;
-    shakeAsked = true;          // ask once per visit
-    if (typeof DeviceMotionEvent.requestPermission === 'function') {
-      say('allow motion access to shake for new sounds');
-      DeviceMotionEvent.requestPermission().then(r => {
-        dbg('motion permission', r);
-        if (r === 'granted') enableShake(); else say('shake is off: motion access was not allowed', VERB + ' to start');
-      }).catch(() => say('shake isn’t available here', VERB + ' to start'));
-    } else enableShake();
+    shake = 'pending';
+    if (typeof DeviceMotionEvent.requestPermission !== 'function') return enableShake();
+    say('allow motion access');
+    DeviceMotionEvent.requestPermission().then(r => {
+      dbg('motion permission', r);
+      if (r === 'granted') enableShake(); else { shake = 'failed'; say('shake is off: tap to cycle', VERB + ' to start'); }
+    }).catch(() => { shake = 'failed'; say('no shake here: tap to cycle', VERB + ' to start'); });
   }
-  cycleBtn.addEventListener('click', () => { cycleSounds(); askForShake(); });
+  cycleBtn.addEventListener('click', () => {
+    if (!canShake || shake === 'failed') return cycleSounds();   // desktop, or shake isn't available: the button changes the bank
+    if (shake === 'unasked') askForShake();                      // first tap: ask, no bank change
+    else if (shake === 'on') say('shake to change sounds', VERB + ' to start');
+  });
   playBtn.addEventListener('click', () => {
     if (state === 'input') playMelody(true);                 // your turn: hear the pattern again
     else if (state === 'ready') beginRound();                // 'press play'
