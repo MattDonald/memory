@@ -1,0 +1,1104 @@
+<!-- HOMEPAGE for a Readymag Code widget: paste all of this into the Widget code box.
+     It is the whole page (name, game, popups), so dark mode covers everything.
+     EDIT: the about / how to play popup texts (bottom of the markup),
+     and the sound banks (BANKS list in the script).
+     FULLSCREEN (top of the script) = true: covers the whole screen, whatever size the widget is. Put the widget on its own page.
+     Colours (set once, in the PALETTE block at the top of the stylesheet): light = orange background, off-white everything else, the inverse colour where a pad covers the name. Dark = off-black background, orange text and icons, pads as in light. Dark mode follows the device. -->
+<style>
+/* ============================== TYPOGRAPHY ==============================
+   Set your fonts and sizes here. The rest of the stylesheet reads from these.
+   To use a custom font, load it first (an @font-face, or a <link>, above this <style>), then name it below.
+   Sizes in em are relative to --mg-size-base. */
+#memgame {
+  --mg-font: system-ui, sans-serif;        /* the font for everything */
+  --mg-font-h1: var(--mg-font);            /* a different font just for the h1 (mattdonald) */
+  --mg-size-base: 16px;                    /* base size: every em size below is relative to this */
+  --mg-size-h1: clamp(1.5em, 7vw, 3em);    /* h1: mattdonald */
+  --mg-size-h2: 1em;                       /* h2: always creating */
+  --mg-size-h3: 1.1em;                     /* h3: about / how to play, inside the sheets */
+  --mg-size-nav: 1em;                      /* about / how to play, top right */
+  --mg-size-bank: var(--mg-size-nav);      /* the bank title, top left */
+  --mg-size-message: 1em;                  /* press play / your turn..., beside the play circle */
+  --mg-size-sheet: 1em;                    /* the text inside the sheets */
+  --mg-msg-slot: 10em;                     /* room reserved for the message pill: at least the width of the longest message */
+  --mg-size-round: var(--mg-size-nav);     /* 'round 2/3' during a game */
+  --mg-size-close: 1.6em;                  /* the x that closes a sheet */
+  --mg-size-key: .8em;                     /* the letters on the keyboard reference */
+  --mg-weight-key: 600;
+  --mg-weight-h1: 600; --mg-weight-h2: 400; --mg-weight-h3: 600;
+}
+/* ========================================================================= */
+#memgame {
+  /* PALETTE: the only place a colour is written. Everything else points at these three. */
+  --mg-orange:#FE5925; --mg-offwhite:#E0E0D7; --mg-black:#111;
+  /* THEME: the only two values that change between light and dark (light: off-white on orange. dark: orange on off-black).
+     Follows the device; set data-theme="light" or "dark" on #memgame to force one. Needs light-dark() (Chrome 123, Safari 17.5, Firefox 120). */
+  color-scheme:light dark;
+  --mg-fg:light-dark(var(--mg-offwhite), var(--mg-orange));   /* text and icons */
+  --mg-bg:light-dark(var(--mg-orange), var(--mg-black));      /* background, and the text on pills, the wipe and the play icon */
+  /* PADS: the same in both themes. The name shows through a pad in the opposite colour. */
+  --mg-pad-fill:var(--mg-offwhite); --mg-pad-lit-fill:var(--mg-orange); --mg-pad-opacity:1; --mg-pad-lit-filter:none;
+  position:relative; width:100%; height:100%; min-height:300px; overflow:hidden; background:var(--mg-bg);
+  display:flex; flex-direction:column; color:var(--mg-fg); font:var(--mg-size-base)/1.3 var(--mg-font); text-align:center;
+  -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
+#memgame[data-theme="light"] { color-scheme:light; }
+#memgame[data-theme="dark"] { color-scheme:dark; }
+#memgame.mg-full { position:fixed; left:0; top:0; width:100vw; height:100vh; height:100dvh; min-height:0; z-index:2147483000;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);
+  touch-action:none; overscroll-behavior:contain; }
+#memgame, #memgame * { box-sizing:border-box; }
+#memgame button { font:inherit; margin:0; -webkit-appearance:none; appearance:none; }
+#memgame p { margin:0; }
+#memgame svg { fill:currentColor; }
+#mg-stage { position:relative; flex:1; min-height:0; }
+#mg-pads { position:absolute; inset:0; }
+#mg-top { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:1em; padding:.75em 1em 0; text-align:left; }
+.mg-namewrap { position:absolute; left:50%; top:50%; width:max-content; display:flex; flex-direction:column; align-items:flex-end;
+  transform:translate(-50%, -50%); white-space:nowrap; pointer-events:none; }
+.mg-name-text { align-self:stretch; margin:0; font-family:var(--mg-font-h1); font-size:var(--mg-size-h1); font-weight:var(--mg-weight-h1); line-height:1.1; text-align:center; }
+.mg-tag { margin:.15em 0 0; font-size:var(--mg-size-h2); font-weight:var(--mg-weight-h2); line-height:1.3; }   /* right edge level with the name */
+.mg-namewrap::before { content:''; display:block; flex:none; font-size:var(--mg-size-h2); height:1.45em; }   /* mirrors the tagline's height above the name, so the name itself stays dead centre at any size */
+/* two copies of the name sit above the pads; the script masks each to the pads' circles */
+#mg-name-rev { color:var(--mg-pad-lit-fill); z-index:2; }
+#mg-name-rev2 { color:var(--mg-pad-fill); z-index:2; }   /* the inverse: shows through lit pads, so the word is never lost */
+#mg-bankbar { display:flex; align-items:center; gap:.25em; }
+#memgame #mg-bankbar .mg-icon { padding:.4em .5em; }
+#mg-bankdisplay { font-size:var(--mg-size-bank); }
+#mg-nav { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.5em; text-align:right; }
+#memgame .mg-link { background:var(--mg-offwhite); border:0; border-radius:999px; padding:.4em 1em; font:inherit; font-size:var(--mg-size-nav); line-height:1.2; color:var(--mg-bg); cursor:pointer; text-decoration:none; }
+#memgame dialog { --mg-sheet-gap:24px;   /* how far short of the top of the screen the card stops */
+  position:fixed; inset:auto 0 0 0; margin:0; padding:0; border:0; border-radius:16px 16px 0 0;
+  width:100%; max-width:none; height:calc(100vh - var(--mg-sheet-gap) - env(safe-area-inset-top,0px)); height:calc(100dvh - var(--mg-sheet-gap) - env(safe-area-inset-top,0px));
+  max-height:none; overflow:hidden;
+  background:var(--mg-fg); color:var(--mg-bg);   /* the card is the page colours swapped */
+  text-align:left; font:inherit; -webkit-user-select:text; user-select:text; touch-action:none;
+  transform:translateY(100%); transition:transform .3s ease; }
+#memgame dialog[open] { display:flex; flex-direction:column; }
+#memgame dialog.mg-open { transform:translateY(calc(100% - 33.34vh)); transform:translateY(calc(100% - 33.34dvh)); }   /* opens with the bottom third showing */
+#memgame dialog::backdrop { background:transparent; }
+#memgame dialog:focus { outline:none; }   /* the card itself holds focus when it opens, so no ring around the x */
+#memgame .mg-grab { flex:none; position:relative; width:100%; height:26px; }
+#memgame .mg-grab::before { content:''; position:absolute; left:50%; top:10px; width:40px; height:4px; margin-left:-20px; border-radius:2px; background:currentColor; }
+#memgame .mg-dlg-body { font-size:var(--mg-size-sheet); flex:1; min-height:0; overflow-y:auto; scrollbar-width:none; overscroll-behavior:contain; touch-action:none;   /* the script moves the card and the text together */
+  padding:.75em 1.5em calc(1.5em + env(safe-area-inset-bottom,0px)); }
+#memgame .mg-dlg-body::-webkit-scrollbar { display:none; }
+#memgame .mg-dlg-body h3 { margin:0 2em .75em 0; font-size:var(--mg-size-h3); font-weight:var(--mg-weight-h3); }
+#memgame .mg-dlg-body p, #memgame .mg-dlg-body li { margin:.5em 0; }
+#memgame .mg-dlg-body ol, #memgame .mg-dlg-body ul { margin:.5em 0; padding-left:1.3em; }
+#memgame .mg-close { position:absolute; top:.6em; right:.8em; background:none; border:0; color:inherit; font-size:var(--mg-size-close); line-height:1; cursor:pointer; padding:.1em .3em; }
+#memgame .mg-ico svg { height:20px; width:auto; vertical-align:-3px; margin-right:.4em; }
+@keyframes mg-drift { 0%,100% { transform:translate(0,0); } 33% { transform:translate(var(--dx1),var(--dy1)); } 66% { transform:translate(var(--dx2),var(--dy2)); } }
+#mg-playgroup { position:absolute; display:flex; align-items:center; gap:12px; transition:left .8s ease, top .8s ease; will-change:transform; animation:mg-drift var(--dur,9s) ease-in-out infinite; }
+.mg-msgslot { width:var(--mg-msg-slot, 10em); }   /* room kept for the widest message, so the play group's size never changes */
+#mg-playgroup p { width:max-content; max-width:100%; box-sizing:border-box; padding:.4em 1em; border-radius:999px; background:var(--mg-offwhite); color:var(--mg-bg); font-size:var(--mg-size-message); line-height:1.2; text-align:center; white-space:nowrap; }
+#mg-play { position:relative; flex:none; width:var(--size,96px); height:var(--size,96px); border:0; border-radius:50%; padding:0; cursor:pointer;
+  background:none; color:var(--mg-bg); display:flex; align-items:center; justify-content:center; }   /* the reel is the circle */
+#mg-play:disabled { cursor:default; }   /* no fade while it plays: the reel turns instead */
+#mg-play .mg-reel { position:absolute; inset:0; width:100%; height:100%; fill:var(--mg-offwhite);
+  --mg-reel-speed:2s;   /* time for one full turn */
+  animation:mg-spin var(--mg-reel-speed) linear infinite; animation-play-state:paused; }
+#mg-play.mg-spinning .mg-reel { animation-play-state:running; }   /* turns while the pattern plays; stops where it is, and carries on from there next time */
+#mg-play .mg-playicon { position:relative; height:20px; width:auto; display:block; transform:translateX(8%); }
+@keyframes mg-spin { to { transform:rotate(360deg); } }
+#memgame .mg-pad { position:absolute; width:var(--size,96px); height:var(--size,96px); border-radius:50%; padding:0; cursor:pointer;
+  background:var(--mg-pad-fill); border:0; opacity:var(--mg-pad-opacity,.85);
+  transition:left .8s ease, top .8s ease, background-color var(--mg-fade,.5s) ease, color var(--mg-fade,.5s) ease;   /* the fade back after a trigger; --mg-fade sets its length */
+  will-change:transform; animation:mg-drift var(--dur,9s) ease-in-out infinite; }
+#memgame .mg-pad.mg-lit { transition:none; opacity:1;   /* instant on, then the normal transition fades it back */ filter:var(--mg-pad-lit-filter, brightness(1.4)); background:var(--mg-pad-lit-fill); }
+#memgame .mg-pad:disabled { cursor:default; }
+/* the key that triggers each pad, centred on it: game mode only, and only where the keyboard reference shows (hidden on touch screens below) */
+#memgame .mg-pad { display:flex; align-items:center; justify-content:center; user-select:none; -webkit-user-select:none; color:var(--mg-pad-lit-fill); }
+#memgame .mg-pad.mg-lit { color:var(--mg-pad-fill); }
+#memgame .mg-pad::after { content:none; pointer-events:none; font-family:var(--mg-font); font-weight:var(--mg-weight-key); font-size:calc(var(--size, 96px) * .3); line-height:1; }
+#memgame.mg-ingame .mg-pad::after { content:attr(data-key); }
+@media (prefers-reduced-motion: reduce) { #memgame .mg-pad, #mg-playgroup, #mg-play .mg-reel { animation:none; } }
+/* ---- game mode: the nav and the central text step aside, the round counter appears ---- */
+#memgame.mg-ingame #mg-nav, #memgame.mg-ingame .mg-namewrap { display:none; }
+#mg-round { display:none; position:absolute; z-index:1; top:calc(1em + env(safe-area-inset-top,0px)); left:50%; transform:translateX(-50%);
+  font-size:var(--mg-size-round); line-height:1.3; white-space:nowrap; pointer-events:none; }
+#memgame.mg-ingame #mg-round { display:block; }
+@media (orientation: portrait) {   /* portrait: down the left edge, in the middle, reading bottom to top */
+  #mg-round { top:50%; left:calc(.75em + env(safe-area-inset-left,0px)); transform:translateY(-50%) rotate(180deg); writing-mode:vertical-rl; }
+}
+/* ---- the wipe: an off-white overlay that sweeps across the screen, left to right ---- */
+#mg-wipe { display:none; position:absolute; inset:0; z-index:20; align-items:center; justify-content:center; background:var(--mg-offwhite); }
+#mg-wipe-text { color:var(--mg-bg); font-family:var(--mg-font-h1); font-size:var(--mg-size-h1); font-weight:var(--mg-weight-h1); line-height:1.1; text-align:center; padding:0 1em; }
+
+/* ---- keyboard reference: circles, desktop only (not touch screens), not clickable ---- */
+#mg-keys { --mg-key-size:30px; --mg-key-gap:4px; --mg-key-dim:.3;   /* circle size, space between circles, opacity of keys with no pad */
+  display:flex; flex-direction:column; gap:var(--mg-key-gap); position:absolute; left:50%; bottom:calc(1em + env(safe-area-inset-bottom,0px));
+  transform:translateX(-50%); z-index:1; pointer-events:none; }
+@media (hover: none) and (pointer: coarse) { #mg-keys, #memgame .mg-pad::after { display:none; } }   /* hidden on touch screens, shown at any desktop window size */
+#mg-keys .mg-keyrow { position:relative; width:calc(7 * var(--mg-key-size) + 6 * var(--mg-key-gap)); height:var(--mg-key-size); }
+#mg-keys .mg-key { position:absolute; top:0; box-sizing:border-box; width:var(--mg-key-size); height:var(--mg-key-size); border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-family:var(--mg-font); font-size:var(--mg-size-key); font-weight:var(--mg-weight-key); line-height:1; transition:none; }
+#mg-keys .mg-white { left:calc(var(--x) * (var(--mg-key-size) + var(--mg-key-gap))); background:var(--mg-offwhite); color:var(--mg-orange); }
+#mg-keys .mg-black { left:calc(var(--x) * (var(--mg-key-size) + var(--mg-key-gap)) - var(--mg-key-gap) / 2 - var(--mg-key-size) / 2);
+  background:var(--mg-orange); border:2px solid var(--mg-offwhite); color:var(--mg-offwhite); }
+#mg-keys .mg-key.mg-key-off { opacity:var(--mg-key-dim); }
+#mg-bottom { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:.75em 1em 1em;
+  --mg-icon-gap:10px;   /* the buttons' tap padding: each button has half of this either side */
+  /* The gaps below are tuned so the visible white space between neighbouring shapes is the same (about 14.5px on average),
+     because round and square icons look further apart than their boxes are. Numbers are the gap between the icon boxes. */
+  --mg-gap-lives:7.8px; --mg-gap-point-metro:12.1px; --mg-gap-metro-midi:10.3px; }
+#mg-status { display:flex; flex-wrap:wrap; align-items:center; align-self:center; gap:4px 16px; text-align:left; }
+#mg-controls { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:0; margin-left:auto; margin-right:calc(var(--mg-icon-gap) / -2); }
+#mg-chances { display:flex; gap:.5em; align-items:center; color:var(--mg-fg); }
+#mg-chanceIcons { display:flex; gap:var(--mg-gap-lives); align-items:center; }
+#mg-chances .mg-chance { width:20px; height:20px; transition:opacity .4s ease; }
+#mg-chances .mg-chance svg { width:100%; height:100%; display:block; }
+#mg-chances .mg-chance.mg-gone { opacity:0; }
+#memgame button.mg-icon { background:none; border:0; padding:.7em calc(var(--mg-icon-gap) / 2); cursor:pointer; color:var(--mg-fg); transition:opacity .2s ease; }
+#memgame button.mg-icon svg { display:block; height:20px; width:auto; }
+#memgame button.mg-icon[aria-pressed="false"], #memgame button.mg-icon:disabled { opacity:.35; }
+#memgame button.mg-icon:disabled { cursor:default; }
+#memgame #mg-metro { margin-left:calc(var(--mg-gap-point-metro) - var(--mg-icon-gap)); }
+#memgame #mg-midi { margin-left:calc(var(--mg-gap-metro-midi) - var(--mg-icon-gap)); }
+</style>
+<div id="memgame">
+<div id="mg-top">
+<div id="mg-bankbar">
+<p id="mg-bankdisplay"></p>
+<button id="mg-cycle" class="mg-icon" aria-label="cycle sounds"><svg viewBox="0 0 48 40" aria-hidden="true" focusable="false"><path d="M37.2075 7.67362H33.3693V0.589663C33.3695 0.486226 33.3423 0.384574 33.2907 0.29494C33.2391 0.205305 33.1648 0.130863 33.0752 0.07908C32.9857 0.0272969 32.8841 3.73134e-05 32.7807 3.8285e-08C32.6772 -3.72368e-05 32.5756 0.0271449 32.486 0.0788635L16.9844 8.93289C16.8939 8.98515 16.8185 9.06004 16.7656 9.15022C16.7127 9.24039 16.6842 9.34275 16.6828 9.44727C16.6828 9.65656 16.7999 9.85519 16.9844 9.95807L32.486 18.8156C32.5757 18.8687 32.6778 18.8968 32.782 18.8972C32.8862 18.8975 32.9886 18.8701 33.0786 18.8177C33.1687 18.7653 33.243 18.6898 33.2941 18.599C33.3452 18.5082 33.3712 18.4055 33.3693 18.3013V11.2173H37.2075C41.1166 11.2173 44.2914 14.3957 44.2914 18.3013V29.3723C44.2886 31.2502 43.5413 33.0505 42.2134 34.3783C40.8855 35.7062 39.0854 36.4535 37.2075 36.4563H10.6312C8.75328 36.4535 6.95306 35.7062 5.62518 34.3783C4.29729 33.0505 3.5501 31.2502 3.54729 29.3723V18.3013C3.54729 14.3957 6.72208 11.2173 10.6312 11.2173H12.8482V7.67362H10.6312C7.8131 7.67644 5.11119 8.79694 3.11816 10.7893C1.12514 12.7817 0.00375605 15.4832 0 18.3013V29.3723C0.00375605 32.1904 1.12514 34.892 3.11816 36.8843C5.11119 38.8767 7.8131 39.9972 10.6312 40H37.2075C40.0256 39.9972 42.7275 38.8767 44.7205 36.8843C46.7135 34.892 47.8349 32.1904 47.8387 29.3723V18.3013C47.8349 15.4832 46.7135 12.7817 44.7205 10.7893C42.7275 8.79694 40.0256 7.67644 37.2075 7.67362Z"/></svg></button>
+</div>
+<nav id="mg-nav" aria-label="main">
+<button class="mg-link" id="mg-about-btn">about</button>
+<button class="mg-link" id="mg-how-btn">how to play</button>
+</nav>
+</div>
+<div class="mg-namewrap" id="mg-name">
+<h1 class="mg-name-text">mattdonald</h1>
+<h2 class="mg-tag">always creating</h2>
+</div>
+<div id="mg-stage"><div id="mg-pads"></div>
+<div id="mg-playgroup">
+<button id="mg-play" aria-label="play"><svg class="mg-reel" viewBox="0 0 80 80" aria-hidden="true" focusable="false"><path d="M71.0097 14.7024C66.3698 9.02156 60.257 4.72522 53.3393 2.28302C46.4216 -0.159175 38.9654 -0.653223 31.7858 0.854886C24.6062 2.36299 17.9795 5.81521 12.6302 10.8341C7.28089 15.8531 3.41484 22.2455 1.45468 29.3127C-0.505479 36.3799 -0.484292 43.8497 1.51592 50.9057C3.51614 57.9616 7.41838 64.3321 12.7961 69.3206C18.1738 74.3091 24.8199 77.7237 32.008 79.1911C39.196 80.6585 46.6493 80.1222 53.553 77.6408C59.5696 75.4681 64.9781 71.8865 69.3259 67.1957C73.6738 62.5049 76.8346 56.8413 78.5438 50.6789C80.253 44.5166 80.4609 38.0346 79.1501 31.7755C77.8393 25.5163 75.048 19.662 71.0097 14.7024ZM22.6551 10.2704C23.5806 9.61137 24.7299 9.34653 25.8506 9.5341C26.9713 9.72167 27.9717 10.3463 28.632 11.2707C28.8035 11.5141 28.9506 11.7737 29.0713 12.0459L32.6328 20.2105C32.963 20.9699 33.0002 21.8246 32.7374 22.6098C32.4745 23.395 31.9301 24.0551 31.2091 24.4628C30.4881 24.8705 29.6417 24.9969 28.833 24.8177C28.0244 24.6384 27.3107 24.1662 26.8298 23.492L21.6536 16.2404C21.3269 15.7828 21.0936 15.2653 20.9672 14.7175C20.8407 14.1697 20.8235 13.6023 20.9165 13.0479C21.0095 12.4934 21.2109 11.9627 21.5093 11.4862C21.8076 11.0096 22.1969 10.5965 22.6551 10.2704ZM32.2955 59.5566L28.5948 67.6592C28.1229 68.6919 27.2601 69.495 26.1961 69.8921C25.1321 70.2891 23.9539 70.2477 22.9205 69.7768C21.8871 69.3058 21.083 68.444 20.6849 67.3808C20.2868 66.3175 20.3273 65.1397 20.7976 64.1062C20.9228 63.8361 21.0744 63.579 21.2502 63.3387L26.5498 56.1765C27.0422 55.5106 27.7638 55.0505 28.5754 54.8851C29.3871 54.7196 30.2313 54.8604 30.9452 55.2804C31.6591 55.7004 32.1921 56.3698 32.4415 57.1594C32.6909 57.9491 32.6389 58.803 32.2955 59.5566ZM70.5291 44.4694C70.2323 44.4961 69.9336 44.4936 69.6373 44.4618L60.7778 43.4583C59.9546 43.3656 59.1949 42.9712 58.6456 42.3514C58.0963 41.7315 57.7962 40.9302 57.8034 40.1021C57.8106 39.274 58.1245 38.478 58.6845 37.8678C59.2445 37.2575 60.0109 36.8764 60.8355 36.798L69.7113 35.9481C70.2712 35.8941 70.8363 35.9509 71.3742 36.1153C71.9121 36.2796 72.4124 36.5483 72.8464 36.906C73.2804 37.2637 73.6396 37.7034 73.9036 38.1999C74.1675 38.6964 74.3311 39.2401 74.3848 39.7998C74.4385 40.3595 74.3814 40.9243 74.2166 41.462C74.0519 41.9996 73.7829 42.4995 73.4248 42.9332C73.0667 43.3668 72.6267 43.7257 72.1299 43.9893C71.633 44.2529 71.0891 44.416 70.5291 44.4694Z"/></svg><svg class="mg-playicon" viewBox="0 0 36 40" aria-hidden="true" focusable="false"><path d="M34.9883 18.2866L2.98885 0.260982C2.685 0.0890919 2.3406 -0.000933781 1.9903 7.30316e-06C1.64001 0.000948388 1.29617 0.0928124 0.993278 0.266332C0.690382 0.439852 0.439105 0.688954 0.264754 0.988567C0.0904029 1.28818 -0.000887906 1.62773 1.40393e-05 1.97317V38.0277C-0.00130123 38.3732 0.0898205 38.713 0.264167 39.0127C0.438514 39.3125 0.689904 39.5616 0.993033 39.7349C1.29616 39.9083 1.64029 39.9997 1.9907 40C2.3411 40.0003 2.68539 39.9095 2.98885 39.7368L34.9883 21.7111C35.2954 21.5394 35.5509 21.2905 35.7286 20.9897C35.9063 20.6889 36 20.347 36 19.9989C36 19.6507 35.9063 19.3088 35.7286 19.008C35.5509 18.7072 35.2954 18.4583 34.9883 18.2866Z"/></svg></button>
+<div class="mg-msgslot"><p id="mg-message">press to start</p></div>
+</div></div>
+<!-- the two reveal copies of the name are cloned from #mg-name by the script: edit the name above only -->
+<div id="mg-bottom">
+<div id="mg-status">
+<div id="mg-chances" role="img">
+<span id="mg-chanceIcons"></span>
+</div>
+</div>
+<div id="mg-controls">
+<button id="mg-visual" class="mg-icon" aria-label="visual" aria-pressed="true"><svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><path d="M36.6658 0H7.54402L13.4917 5.94926L6.21725 13.223C5.41921 14.0299 4.81176 15.0052 4.43936 16.0774L0 11.6395V36.6676C0 38.5073 1.49221 40 3.33418 40H36.6658C38.5077 40 40 38.5073 40 36.6676V3.33509C40 1.49264 38.5077 0 36.6658 0ZM36.7406 29.8985C36.3698 30.2482 35.8769 30.4387 35.3674 30.4292C34.8579 30.4197 34.3724 30.211 34.0149 29.8478L24.9733 20.8091L23.9909 21.7917L26.1532 23.9546C26.4319 24.2738 26.5788 24.6871 26.564 25.1106C26.5492 25.5341 26.3739 25.9362 26.0736 26.2351C25.7734 26.5341 25.3707 26.7076 24.9472 26.7205C24.5237 26.7334 24.1112 26.5846 23.7934 26.3044L20.5553 23.0654L19.0283 23.506L22.811 27.287C22.9655 27.442 23.0878 27.6262 23.1707 27.8288C23.2537 28.0314 23.2957 28.2484 23.2942 28.4673C23.2952 28.6864 23.253 28.9036 23.1699 29.1064C23.0868 29.3091 22.9644 29.4935 22.8099 29.6488C22.6553 29.8041 22.4717 29.9274 22.2694 30.0115C22.0671 30.0956 21.8501 30.1389 21.6311 30.1389H21.6284C21.1862 30.1375 20.7622 29.9619 20.4484 29.6502L17.0715 26.2697L14.5996 23.7997L13.6172 24.7824L18.1954 29.3618C18.5048 29.668 18.6835 30.0822 18.694 30.5174C18.7045 30.9526 18.5458 31.3749 18.2514 31.6956C18.0943 31.8753 17.9029 32.0218 17.6883 32.1263C17.4738 32.2309 17.2404 32.2914 17.0021 32.3044H16.9861C16.6047 32.2969 16.2418 32.1385 15.977 31.8638L7.19963 23.0814C6.02381 21.9034 5.36342 20.3068 5.36342 18.6422C5.36342 16.9775 6.02381 15.381 7.19963 14.203L14.2846 7.12147L30.2323 7.05738C30.6197 7.05889 30.9981 7.175 31.3198 7.39105C31.6415 7.6071 31.8921 7.91345 32.0402 8.27162C32.1883 8.62979 32.2272 9.02377 32.1521 9.40399C32.0769 9.78422 31.891 10.1337 31.6177 10.4085C31.4362 10.5902 31.2206 10.7342 30.9833 10.8323C30.746 10.9304 30.4917 10.9806 30.2349 10.98H20.5872L36.7005 27.0921C36.8963 27.2897 37.0506 27.5245 37.1542 27.7827C37.2579 28.0409 37.3087 28.3173 37.3038 28.5955C37.3022 28.8394 37.2515 29.0805 37.1547 29.3043C37.058 29.5282 36.9171 29.7303 36.7406 29.8985Z"/></svg></button>
+<button id="mg-metro" class="mg-icon" aria-label="metronome" aria-pressed="true"><svg viewBox="0 0 29 40" aria-hidden="true" focusable="false"><path d="M0 40L0.0449168 35.5989L10.2051 0H17.0727L20.064 10.4794L17.6065 11.1951L15.149 2.58244H12.1287L2.5526 36.1116L2.5605 37.4176H8.78607C9.01917 36.2916 9.62873 35.2812 10.5123 34.556C11.3958 33.8309 12.4994 33.4353 13.6376 33.4357C13.8278 33.4357 14.0128 33.4597 14.1951 33.4838C15.2267 33.6067 16.1948 34.0517 16.9644 34.7568C17.7341 35.4619 18.267 36.392 18.4891 37.4176H24.7146V36.0555L21.6203 25.2504L24.0804 24.5346L27.2672 35.8473L27.2725 40H0Z"/><path d="M14.1047 33.4766C14.1346 33.4802 14.1645 33.4828 14.1945 33.4846C15.0189 33.5914 15.7323 33.8585 16.3692 34.2885C16.4114 34.3241 16.4547 34.3597 16.4987 34.3953L23.8024 17.4264C25.1183 17.4264 26.3022 16.6412 26.8201 15.4288C27.3591 14.1629 27.0763 12.7182 26.1382 11.9731L29 5.31533L26.6535 4.28982L23.7997 10.8087C22.4838 10.8087 21.3 11.5938 20.7821 12.8036C20.243 14.0668 20.5495 15.557 21.4955 16.2887L14.1047 33.4766Z"/></svg></button>
+<button id="mg-midi" class="mg-icon" aria-label="generate midi" disabled><svg viewBox="0 0 41 40" aria-hidden="true" focusable="false"><path d="M41 20.5982C40.9996 17.8926 40.4691 15.2136 39.4385 12.7141C38.408 10.2147 36.8977 7.94371 34.994 6.03095C33.0902 4.1182 30.8303 2.60112 28.3431 1.56632C25.856 0.531516 23.1904 -0.000721744 20.4986 7.3455e-07C17.8071 -0.000360486 15.1418 0.532152 12.655 1.56711C10.1682 2.60208 7.90852 4.1192 6.00505 6.03192C4.10157 7.94464 2.59155 10.2155 1.56121 12.7148C0.53086 15.2141 0.00035933 17.8929 0 20.5982C0 29.5647 5.70821 37.1698 13.6658 40V34.3313H27.3315V40C35.2891 37.1698 41 29.5647 41 20.5982ZM6.83287 24.0335C6.37609 24.0465 5.92134 23.9673 5.49554 23.8006C5.06974 23.6339 4.68152 23.383 4.35386 23.0629C4.02619 22.7427 3.76573 22.3597 3.58787 21.9366C3.41001 21.5136 3.31838 21.0589 3.31838 20.5996C3.31838 20.1403 3.41001 19.6856 3.58787 19.2625C3.76573 18.8394 4.02619 18.4565 4.35386 18.1363C4.68152 17.8162 5.06974 17.5653 5.49554 17.3986C5.92134 17.2318 6.37609 17.1526 6.83287 17.1656C7.72223 17.1909 8.56672 17.5638 9.18688 18.2051C9.80704 18.8463 10.154 19.7053 10.154 20.5996C10.154 21.4939 9.80704 22.3529 9.18688 22.9941C8.56672 23.6354 7.72223 24.0082 6.83287 24.0335ZM10.2507 14.0769C9.7939 14.0899 9.33915 14.0107 8.91334 13.8439C8.48754 13.6772 8.09934 13.4263 7.77167 13.1062C7.44401 12.786 7.18354 12.4031 7.00568 11.98C6.82783 11.5569 6.73617 11.1022 6.73617 10.6429C6.73617 10.1836 6.82783 9.72896 7.00568 9.30586C7.18354 8.88276 7.44401 8.49983 7.77167 8.17967C8.09934 7.85951 8.48754 7.60863 8.91334 7.4419C9.33915 7.27517 9.7939 7.19598 10.2507 7.20897C11.14 7.23428 11.9845 7.60714 12.6047 8.24837C13.2249 8.8896 13.5718 9.74862 13.5718 10.6429C13.5718 11.5372 13.2249 12.3962 12.6047 13.0375C11.9845 13.6787 11.14 14.0516 10.2507 14.0769ZM20.4986 10.3005C20.0419 10.3133 19.5872 10.2339 19.1614 10.067C18.7357 9.9001 18.3475 9.6491 18.02 9.32882C17.6925 9.00853 17.4322 8.62546 17.2545 8.20229C17.0768 7.77912 16.9853 7.32444 16.9855 6.86512C16.9857 6.40581 17.0775 5.95119 17.2555 5.52817C17.4336 5.10514 17.6942 4.7223 18.022 4.40227C18.3498 4.08225 18.7381 3.83152 19.1639 3.66496C19.5898 3.49841 20.0446 3.41941 20.5014 3.43258C21.3907 3.45824 22.235 3.83147 22.8549 4.47295C23.4749 5.11443 23.8215 5.97358 23.8211 6.86785C23.8208 7.76213 23.4735 8.62102 22.8531 9.262C22.2326 9.90298 21.388 10.2755 20.4986 10.3005ZM37.5822 20.5982C37.5951 21.0574 37.5163 21.5144 37.3504 21.9424C37.1846 22.3704 36.935 22.7606 36.6165 23.09C36.2979 23.4193 35.917 23.6811 35.496 23.8599C35.0751 24.0386 34.6227 24.1307 34.1658 24.1307C33.7088 24.1307 33.2565 24.0386 32.8355 23.8599C32.4146 23.6811 32.0336 23.4193 31.715 23.09C31.3965 22.7606 31.147 22.3704 30.9811 21.9424C30.8152 21.5144 30.7364 21.0574 30.7493 20.5982C30.7745 19.7043 31.1455 18.8555 31.7834 18.2322C32.4214 17.6088 33.276 17.2601 34.1658 17.2601C35.0555 17.2601 35.9101 17.6088 36.5481 18.2322C37.186 18.8555 37.557 19.7043 37.5822 20.5982ZM30.7493 7.20897C31.2061 7.19598 31.6609 7.27517 32.0867 7.4419C32.5125 7.60863 32.9007 7.85951 33.2283 8.17967C33.556 8.49983 33.8165 8.88276 33.9943 9.30586C34.1722 9.72896 34.2638 10.1836 34.2638 10.6429C34.2638 11.1022 34.1722 11.5569 33.9943 11.98C33.8165 12.4031 33.556 12.786 33.2283 13.1062C32.9007 13.4263 32.5125 13.6772 32.0867 13.8439C31.6609 14.0107 31.2061 14.0899 30.7493 14.0769C29.86 14.0516 29.0155 13.6787 28.3953 13.0375C27.7751 12.3962 27.4282 11.5372 27.4282 10.6429C27.4282 9.74862 27.7751 8.8896 28.3953 8.24837C29.0155 7.60714 29.86 7.23428 30.7493 7.20897Z"/></svg></button>
+</div>
+</div>
+<!-- Round counter (only during a game) and the full-screen wipe between scenes. -->
+<div id="mg-round" aria-live="polite"></div>
+<div id="mg-wipe" aria-hidden="true"><div id="mg-wipe-text"></div></div>
+
+<!-- Keyboard reference (desktop only): a key is bright when it plays a pad, dim when it does not. -->
+<div id="mg-keys" aria-hidden="true">
+<div class="mg-keyrow">
+<span class="mg-key mg-black" data-key="w" style="--x:1">W</span>
+<span class="mg-key mg-black" data-key="e" style="--x:2">E</span>
+<span class="mg-key mg-black" data-key="t" style="--x:4">T</span>
+<span class="mg-key mg-black" data-key="y" style="--x:5">Y</span>
+<span class="mg-key mg-black" data-key="u" style="--x:6">U</span>
+</div>
+<div class="mg-keyrow">
+<span class="mg-key mg-white" data-key="a" style="--x:0">A</span>
+<span class="mg-key mg-white" data-key="s" style="--x:1">S</span>
+<span class="mg-key mg-white" data-key="d" style="--x:2">D</span>
+<span class="mg-key mg-white" data-key="f" style="--x:3">F</span>
+<span class="mg-key mg-white" data-key="g" style="--x:4">G</span>
+<span class="mg-key mg-white" data-key="h" style="--x:5">H</span>
+<span class="mg-key mg-white" data-key="j" style="--x:6">J</span>
+</div>
+</div>
+
+<!-- EDIT: the popup texts. -->
+<dialog id="mg-dlg-about" tabindex="-1"><div class="mg-grab"></div>
+<button class="mg-close" aria-label="close">&times;</button>
+<div class="mg-dlg-body">
+<h3>about</h3>
+<p>Replace this with a few lines about you and the project.</p>
+<p>A second paragraph, if you want one.</p>
+</div></dialog>
+<dialog id="mg-dlg-how" tabindex="-1"><div class="mg-grab"></div>
+<button class="mg-close" aria-label="close">&times;</button>
+<div class="mg-dlg-body">
+<h3>how to play</h3>
+<ol>
+<li>Press start. There are three rounds, each harder than the last, with more pads and busier rhythms.</li>
+<li><span class="mg-ico" data-from="mg-play"></span>In each round, press play (or the space bar). You hear a one-bar count, then one bar of sound.</li>
+<li>Play it back on the pads, in the same order and the same rhythm. Tap them, or use the home row of your keyboard (A S D F G H).</li>
+<li>You have three lives for the whole game, shown at the bottom. A wrong note or a wrong rhythm costs one. After a slip, you can't lose another until you get a note right.</li>
+<li>Stuck? Press play again on your turn to hear the pattern again. It's free.</li>
+<li>Get all three rounds right to win. Run out of lives and it's game over. Each round brings a new sound bank and tempo.</li>
+</ol>
+<p>The small icons:</p>
+<ul>
+<li><span class="mg-ico" data-from="mg-visual"></span>Flash the pads while the pattern plays.</li>
+<li><span class="mg-ico" data-from="mg-metro"></span>A click on the beat during a game.</li>
+<li><span class="mg-ico" data-from="mg-cycle"></span>Switch the sound bank, between games. On a phone, allow motion access when asked, then shake to switch.</li>
+<li><span class="mg-ico" data-from="mg-midi"></span>Download the last pattern as a MIDI file.</li>
+</ul>
+</div></dialog>
+</div>
+<script>
+(function () {
+  var FULLSCREEN = true;   // true: cover the whole screen (100vw x 100vh). false: fill the widget's box only.
+
+  function boot() {
+  // =====================================================================
+  // CONFIG: edit these
+  // =====================================================================
+  const BPM = 120;                  // default tempo (a bank can set its own with bpm)
+  let tempo = BPM;                  // tempo in use: follows the current bank
+  const MAX_MISTAKES = 3;           // game over on this many mistakes (lives carry across the rounds)
+  const WIPE_MS = 550;              // how long each wipe across the screen takes
+  const HOLD_MS = 1300;             // how long the screen stays covered, showing its text (round 2, you win!...)
+  const JUDGE_RHYTHM = true;        // false = judge pitch order only
+  const TIMING_PCT = 0.35;          // allowed timing error, as a share of the gap between notes
+  const TIMING_MIN_MS = 50;         // but never tighter than this
+  const RETRY_GAP_BEATS = 1.5;      // after a mistake, presses are ignored until the player has been quiet this long (in beats), so a pattern carried on after a slip can't restart itself by accident
+  const DEBUG = true;               // true = log every press and the pattern, to the console and a panel on screen. Set false before publishing.
+  const END_FADE_MS = 15;            // quick fade-out over the end of every sample, so it never stops on a click (0 = off)
+  const SHAKE_THRESHOLD = 28;       // phone shake to change sounds: how hard a shake must be (lower = more sensitive; walking is well under 15)
+  const SHAKE_COOLDOWN_MS = 900;    // ...and the least time between two shakes
+  const PRELOAD_ALL = true;         // true = load every bank on page load; false = load each bank when first used
+
+  // ---------------------------------------------------------------------
+  // LEVELS: every round is one bar (4 beats). Rounds cycle level 1, 2, 3, 1, 2, 3...
+  //   durations       allowed note values in beats (1 = 1/4, 0.5 = 1/8, 0.25 = 1/16);
+  //                   list a value more than once to make it more likely
+  //   minNotes / maxNotes   how many notes the bar contains
+  //   pitches         melodic banks: how many pads are in play (new pads appear)
+  //   drumWeights     drum banks: how often [kick, snare, hat, perc] are picked
+  //   accentChance    drum banks: how often kick/snare land on their beats
+  // ---------------------------------------------------------------------
+  const BAR_BEATS = 4;
+  const LEVELS = [
+    { durations: [1, 1, 0.5],               minNotes: 4, maxNotes: 5,  pitches: 4, drumWeights: [3, 2, 3, 0], accentChance: 0.9 },
+    { durations: [1, 0.5, 0.5, 0.25],       minNotes: 5, maxNotes: 7,  pitches: 5, drumWeights: [3, 2, 3, 1], accentChance: 0.8 },
+    { durations: [1, 0.5, 0.5, 0.25, 0.25], minNotes: 7, maxNotes: 10, pitches: 6, drumWeights: [3, 2, 3, 2], accentChance: 0.7 }
+  ];
+  const DRUM_ACCENTS = { 0: 0, 1: 1, 2: 0, 3: 1 };  // beat in bar -> pad: kick on 1 & 3, snare on 2 & 4
+
+  // ---------------------------------------------------------------------
+  // SOUND BANKS: PASTE YOUR LINKS HERE
+  // Each bank = a title (shown to the player), a pattern type, sample links in pad order
+  // (pad 1, 2, 3...) and keys: the computer keyboard key for each sound, same order.
+  // Keys appear on the pads and trigger them. Use the piano layout (see KEYBOARD below):
+  //   a w s e d f t g y h u j k
+  // Optional bpm: the tempo for that bank. Patterns, the metronome and the midi export follow it
+  // (a bank with no bpm uses BPM above).
+  // Pattern types:
+  //   pattern: 'drums'    4 links: kick, snare, hat, perc. Always 4 pads.
+  //   pattern: 'melodic'  6 links. Pads appear as levels rise: 4, then 5, then 6.
+  //                       (a bank with no pattern is melodic)
+  // Use direct file links. For GitHub that means the "raw" form:
+  //   https://raw.githubusercontent.com/YOUR-USER/YOUR-REPO/main/path/to/file.wav
+  // (NOT the github.com/.../blob/... page link, which won't work.)
+  // Add or remove banks as you like. wav, mp3 and ogg all work.
+  // Every bank needs working links: pads play only your samples.
+  // ---------------------------------------------------------------------
+  const BANKS = [
+    { title: 'dust palace', pattern: 'drums', bpm: 120, keys: ['a', 's', 'd', 'f', 'g', 'h'], files: [
+      'https://mattdonald.github.io/memory/808Distort_Kick1.wav',
+      'https://mattdonald.github.io/memory/808Distort_Snare1.wav',
+      'https://mattdonald.github.io/memory/808Distort_Hat1.wav',
+      'https://mattdonald.github.io/memory/808Distort_Clap1.wav',
+      'https://mattdonald.github.io/memory/808Spring_Clap1.wav',
+      'https://mattdonald.github.io/memory/808Spring_Clave1.wav'
+    ]},
+    { title: 'dust', pattern: 'drums', bpm: 100, keys: ['a', 's', 'd', 'f'], files: [
+      'https://mattdonald.github.io/memory/808Distort_Kick1.wav',
+      'https://mattdonald.github.io/memory/808Distort_Snare1.wav',
+      'https://mattdonald.github.io/memory/808Spring_Clap1.wav',
+      'https://mattdonald.github.io/memory/808Spring_Clave1.wav'
+    ]}
+    // , { name: 'bank 3', files: [ ... ] }
+  ];
+
+  // KEYBOARD: the piano-style layout (one octave, C up to the C above), key -> note name.
+  // Used for the keyboard reference and the pitches in the midi export (middle C = A).
+  const KEYBOARD = { a: 'C', w: 'C#', s: 'D', e: 'D#', d: 'E', f: 'F', t: 'F#', g: 'G', y: 'G#', h: 'A', u: 'A#', j: 'B', k: 'C (high)' };
+  const DEFAULT_KEYS = ['a', 'd', 'g', 'k', 'h', 's'];   // used when a bank has no keys (C E G C A D)
+
+  // Most pads on screen (melodic banks grow to 6). Pad colours live in the css, in one place.
+  const MAX_PADS = 6;
+  // =====================================================================
+
+  // CHANCE ICON (life.svg): one copy per life left. Its colour comes from the css (currentColor).
+  const CHANCE_ICON = `<svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><path d="M4.24482 32.3097L20.0003 20.0015L1.46205 27.4954C2.16675 29.2377 3.1077 30.8518 4.24482 32.3097ZM20.0003 39.9998C20.9426 39.9998 21.8688 39.9344 22.779 39.8036L20.0003 20.0015L17.2176 39.8036C18.1251 39.9318 19.0527 39.9972 20.0003 39.9998ZM40 20.0015C39.9973 19.0562 39.9306 18.1297 39.7998 17.2218L20.0003 20.0015L39.7998 22.7811C39.9306 21.8733 39.9973 20.9467 40 20.0015Z"/><path d="M12.5023 38.5395L19.9977 19.9991L7.68954 35.7559C9.14697 36.8974 10.7645 37.8386 12.5023 38.5395Z"/><path d="M32.2992 35.7562L19.9951 19.9994L27.4865 38.5399C29.2282 37.839 30.8418 36.8977 32.2992 35.7562ZM38.5374 27.4933L19.9951 19.9994L35.7506 32.3077C36.8917 30.8497 37.8327 29.2356 38.5374 27.4933ZM1.45684 12.5055L19.9951 19.9994L4.23961 7.69118C3.09271 9.1587 2.15608 10.7791 1.45684 12.5055ZM27.4905 1.45896L19.9951 19.9994L32.3032 4.2426C30.8362 3.09532 29.2163 2.15843 27.4905 1.45896Z"/><path d="M35.754 7.69766L19.9985 20.0019L38.5408 12.508C37.84 10.7828 36.902 9.1637 35.754 7.69766Z"/><path d="M19.9973 0C19.0524 0.00267019 18.1248 0.0694372 17.2145 0.200277L19.9977 19.9991L22.776 0.200277C21.8556 0.0690549 20.9271 0.00212589 19.9973 0Z"/><path d="M0.00228089 19.9994C0.00495019 20.9447 0.0703318 21.8712 0.198458 22.7791L19.9977 19.9991L0.198458 17.2197C0.0686199 18.1406 0.00307967 19.0694 0.00228089 19.9994ZM7.69388 4.2426L19.9977 19.9991L12.5066 1.45896C10.7609 2.16923 9.15665 3.09709 7.69388 4.2426Z"/><path d="M4.23961 32.3099L19.9951 20.0016L1.45684 27.4955C2.16153 29.2378 3.10249 30.8519 4.23961 32.3099ZM19.9951 40C20.9374 40 21.8636 39.9346 22.7739 39.8038L19.9951 20.0016L17.2123 39.8038C18.1199 39.9319 19.0475 39.9973 19.9951 40ZM39.9948 20.0016C39.9921 19.0564 39.9254 18.1298 39.7946 17.222L19.9951 20.0016L39.7946 22.7813C39.9254 21.8734 39.9921 20.9469 39.9948 20.0016Z"/><path d="M12.5023 38.5395L19.9977 19.9991L7.68954 35.7559C9.14697 36.8974 10.7645 37.8386 12.5023 38.5395Z"/><path d="M32.2992 35.7562L19.9951 19.9994L27.4865 38.5399C29.2282 37.839 30.8418 36.8977 32.2992 35.7562ZM38.5374 27.4933L19.9951 19.9994L35.7506 32.3077C36.8917 30.8497 37.8327 29.2356 38.5374 27.4933ZM1.45684 12.5055L19.9951 19.9994L4.23961 7.69118C3.09271 9.1587 2.15608 10.7791 1.45684 12.5055ZM27.4905 1.45896L19.9951 19.9994L32.3032 4.2426C30.8362 3.09532 29.2163 2.15843 27.4905 1.45896Z"/><path d="M35.754 7.69766L19.9985 20.0019L38.5408 12.508C37.84 10.7828 36.902 9.1637 35.754 7.69766Z"/><path d="M19.9973 0C19.0524 0.00267019 18.1248 0.0694372 17.2145 0.200277L19.9977 19.9991L22.776 0.200277C21.8556 0.0690549 20.9271 0.00212589 19.9973 0Z"/><path d="M0 20.0019C0.00266929 20.9471 0.0680713 21.8737 0.196197 22.7815L19.9951 20.0016L0.196197 17.2222C0.0663594 18.1431 0.000798775 19.0719 0 20.0019ZM7.69161 4.24504L19.9951 20.0016L12.5043 1.4614C10.7586 2.17167 9.15439 3.09953 7.69161 4.24504Z"/></svg>`;
+
+
+  const playBtn = document.getElementById('mg-play');
+  const visualBtn = document.getElementById('mg-visual');
+  const metroBtn = document.getElementById('mg-metro');
+  const cycleBtn = document.getElementById('mg-cycle');
+  const msg = document.getElementById('mg-message');
+  const gameRoot = document.getElementById('memgame'), roundEl = document.getElementById('mg-round');
+  const wipeEl = document.getElementById('mg-wipe'), wipeText = document.getElementById('mg-wipe-text');
+  const tapScreen = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
+  const VERB = tapScreen ? 'tap' : 'press';        // 'press play' with a mouse, 'tap play' on a touch screen
+  msg.textContent = VERB + ' to start';
+  let msgTimer = null;
+  function say(text, after) {      // show a message. With `after`, it changes to that message 2 seconds later (any newer message cancels this)
+    clearTimeout(msgTimer); msg.textContent = text;
+    if (after) msgTimer = setTimeout(() => { msg.textContent = after; }, 2000);
+  }
+  const chancesEl = document.getElementById('mg-chances');
+  const midiBtn = document.getElementById('mg-midi');
+  const padsEl = document.getElementById('mg-pads');
+
+  // ---- debug: what was pressed vs what the pattern wants ----
+  const mgLog = [];
+  const dbgEl = DEBUG ? Object.assign(document.createElement('div'), { id: 'mg-debug' }) : null;
+  if (dbgEl) {
+    dbgEl.style.cssText = 'position:absolute;left:0;top:0;z-index:30;width:min(100%,38em);max-height:55%;overflow:hidden;box-sizing:border-box;padding:6px 8px;background:rgba(0,0,0,.78);color:#9fef9f;font:11px/1.35 ui-monospace,Menlo,monospace;white-space:pre-wrap;pointer-events:none;text-align:left;';
+    gameRoot.appendChild(dbgEl); window.mgLog = mgLog;
+  }
+  function dbg() {
+    if (!DEBUG) return;
+    const line = (performance.now() / 1000).toFixed(2).padStart(7) + '  ' + Array.prototype.join.call(arguments, ' ');
+    mgLog.push(line); if (mgLog.length > 600) mgLog.shift();
+    console.log('[mg]', line); dbgEl.textContent = mgLog.slice(-16).join('\n');
+  }
+  const padName = i => i === undefined ? '-' : 'pad' + (i + 1) + '(' + ((keysFor(currentBank)[i] || '?').toUpperCase()) + ')';
+  dbg('debug on. touch screen:', tapScreen, '| in the console, copy(mgLog.join("\\n")) copies the whole log');
+
+  let ctx = null;
+  let melody = [], rhythm = [], pos = 0, lastPress = 0, armed = true, holdUntil = 0;
+  let mistakes = 0, round = 0, showVisual = true;   // pad flashing is on by default
+  let state = 'idle';                 // idle | transition | ready | playback | input
+  let currentBank = null;             // index into BANKS (null only if no banks are set up)
+  const bankBuffers = [];             // decoded audio per bank
+  const bankPromises = [];            // load promise per bank
+  let metroOn = true, metroRunning = false, metroGain = null, metroOrigin = 0, metroBeat = 0, metroTimer = null;
+
+  const pads = Array.from({ length: MAX_PADS }, (_, i) => {
+    const b = document.createElement('button');
+    b.className = 'mg-pad';
+    b.addEventListener('pointerdown', () => onPad(i, 'tap'));
+    padsEl.appendChild(b);
+    return b;
+  });
+
+  function getCtx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  // ---- sample loading ----
+  function ensureBank(b) {
+    if (b === null) return Promise.resolve();
+    if (!bankPromises[b]) {
+      bankPromises[b] = Promise.all(BANKS[b].files.map(url =>
+        fetch(url)
+          .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+          .then(ab => getCtx().decodeAudioData(ab))
+          .catch(() => { console.warn('sample failed to load:', url); return null; })   // that pad stays silent
+      )).then(bufs => { bankBuffers[b] = bufs; });
+    }
+    return bankPromises[b];
+  }
+
+  function bankTitle(b) { return BANKS[b].title || BANKS[b].name || `bank ${b + 1}`; }
+
+  function bankTempo(b) { return (b !== null && BANKS[b].bpm) || BPM; }
+
+  function pickBank() {
+    if (!BANKS.length) return null;
+    if (BANKS.length === 1) return 0;
+    let b;
+    do { b = Math.floor(Math.random() * BANKS.length); } while (b === currentBank);
+    return b;
+  }
+
+  // ---- sound ----
+  function tone(i) {
+    const buf = currentBank !== null && bankBuffers[currentBank] && bankBuffers[currentBank][i];
+    if (!buf) return;           // bank still loading, or this file failed to load
+    const c = getCtx();
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const t = c.currentTime, end = t + buf.duration, f = Math.min(END_FADE_MS / 1000, buf.duration / 2);
+    if (f > 0) {                // fade to silence over the last few ms: the file ends at zero, not mid-wave
+      const g = c.createGain();
+      g.gain.setValueAtTime(1, end - f);
+      g.gain.linearRampToValueAtTime(0, end);
+      src.connect(g); g.connect(c.destination);
+    } else src.connect(c.destination);
+    src.start(t);               // plays in full, never cut off
+  }
+
+  function flash(i, ms = 250, snap = false) {   // snap: a quick fade back, so the same pad twice in a row reads as two hits, not one long one
+    const p = pads[i];
+    clearTimeout(p._ft);
+    if (snap) p.style.setProperty('--mg-fade', '.06s'); else p.style.removeProperty('--mg-fade');
+    p.classList.add('mg-lit');
+    p._fadeEnd = performance.now() + ms + fadeMs + 100;   // after this the pad is back at rest: the reveal can skip it
+    p._ft = setTimeout(() => p.classList.remove('mg-lit'), ms);
+  }
+
+  // ---- midi export: the last pattern played, as a one-bar .mid file ----
+  let exportPattern = null;
+  const DRUM_MIDI = [36, 38, 42, 39];   // general midi drums: kick, snare, closed hat, clap (channel 10)
+
+  function vlq(n) {                     // midi variable-length number
+    const b = [n & 0x7f];
+    while ((n >>= 7)) b.unshift((n & 0x7f) | 0x80);
+    return b;
+  }
+
+  function midiNote(key, pad) {         // melodic pads: the key's note, middle C (60) = A
+    const n = Object.keys(KEYBOARD).indexOf((key || '').toLowerCase());
+    return 60 + (n < 0 ? pad : n);
+  }
+
+  function buildMidi(pat) {
+    const PPQ = 480, ch = pat.drums ? 9 : 0, events = [];
+    let tick = 0;
+    pat.melody.forEach((pad, k) => {
+      const len = Math.round(pat.rhythm[k] * PPQ);
+      const note = pat.drums ? DRUM_MIDI[pad] : midiNote(pat.keys[pad], pad);
+      const dur = pat.drums ? Math.min(len, PPQ / 4) : len;   // drum hits stay short
+      events.push({ t: tick, on: 1, b: [0x90 | ch, note, 100] });
+      events.push({ t: tick + dur, on: 0, b: [0x80 | ch, note, 0] });
+      tick += len;
+    });
+    events.sort((a, b) => a.t - b.t || a.on - b.on);              // note-offs before note-ons
+    const mpqn = Math.round(60000000 / pat.tempo);
+    const track = [0x00, 0xFF, 0x51, 0x03, (mpqn >> 16) & 255, (mpqn >> 8) & 255, mpqn & 255,   // tempo
+                   0x00, 0xFF, 0x58, 0x04, 4, 2, 24, 8];                                          // 4/4
+    let last = 0;
+    events.forEach(e => { track.push(...vlq(e.t - last), ...e.b); last = e.t; });
+    track.push(...vlq(Math.max(0, BAR_BEATS * PPQ - last)), 0xFF, 0x2F, 0x00);                   // end at the bar line
+    const n = track.length;
+    return new Uint8Array([
+      0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, PPQ >> 8, PPQ & 255,
+      0x4D, 0x54, 0x72, 0x6B, (n >>> 24) & 255, (n >> 16) & 255, (n >> 8) & 255, n & 255,
+      ...track
+    ]);
+  }
+
+  function saveBytes(bytes, name, type) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([bytes], { type }));
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  function downloadMidi() {
+    if (!exportPattern) return;
+    saveBytes(buildMidi(exportPattern), `${exportPattern.drums ? 'beat' : 'melody'}-${exportPattern.tempo}bpm.mid`, 'audio/midi');
+  }
+
+
+  function keysFor(b) { return (b !== null && BANKS[b].keys) || DEFAULT_KEYS; }
+
+  function updateKeyboard() {   // keys that play a visible pad are bright, the rest dim
+    const keys = keysFor(currentBank), on = new Set();
+    pads.forEach((p, i) => { if (p.style.display !== 'none' && keys[i]) on.add(keys[i].toLowerCase()); });
+    document.querySelectorAll('#mg-keys .mg-key').forEach(el => el.classList.toggle('mg-key-off', !on.has(el.dataset.key)));
+  }
+
+  function labelPads() {      // the key for each pad: drawn in its centre by the css (game mode, desktop), and read out by screen readers
+    const keys = keysFor(currentBank);
+    pads.forEach((p, i) => {
+      const k = keys[i] ? keys[i].toUpperCase() : '';
+      p.textContent = '';
+      p.dataset.key = k;   // drawn in the pad's centre by the css, in game mode
+      p.removeAttribute('title');
+      p.setAttribute('aria-label', 'pad ' + (i + 1) + (k ? ', key ' + k : ''));
+    });
+    updateKeyboard();
+  }
+
+  const ac = new AbortController(), signal = ac.signal;   // lets destroy() remove the document-level listeners
+  document.addEventListener('keydown', e => {
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || !stageEl.isConnected || state === 'transition' || document.querySelector('#memgame dialog[open]')) return;
+    const t = e.target;   // leave typing elsewhere on the page alone
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if (e.code === 'Space' || e.key === ' ') {   // the space bar presses play
+      e.preventDefault();
+      if (!playBtn.disabled) playBtn.click();
+      return;
+    }
+    const i = keysFor(currentBank).findIndex(k => k && k.toLowerCase() === e.key.toLowerCase());
+    if (i === -1 || pads[i].style.display === 'none') { if (e.key.length === 1) dbg('key "' + e.key + '" plays no pad (state ' + state + ')'); return; }
+    onPad(i, 'key "' + e.key + '"');
+  }, { signal });
+
+  const stageEl = document.getElementById('mg-stage');
+  const groupEl = document.getElementById('mg-playgroup');
+  const bankEl = document.getElementById('mg-bankdisplay');
+  const WIGGLE_PX = 8;   // how far a pad drifts from its spot, in any direction
+  const MAX_PAD = 420;   // biggest a pad (and the play circle) can be, in px
+  const PAD_FRAC = 0.42; // ...and as a share of the shorter side of the stage: the size the layout tries first, before shrinking to fit
+  const MIN_GAP_PX = 6;  // the least space ever left between two pads, even when both drift straight at each other
+
+  function showBank() {      // current bank: number and title, top left
+    bankEl.textContent = currentBank === null ? 'no banks set up' : bankTitle(currentBank);
+  }
+
+  const padSizes = {};   // pad size per window size: it stays the same on a bank swap or a new round
+
+  function scatterPads() {    // new random spots for the play group and every pad; pads never overlap each other
+    const W = stageEl.clientWidth, H = stageEl.clientHeight;
+    const m = WIGGLE_PX + 4;                          // keep clear of the edges
+    const slack = 2 * WIGGLE_PX + MIN_GAP_PX;         // drift is a circle of WIGGLE_PX, so two pads drifting straight at each other still keep MIN_GAP_PX
+    const rand = room => m + Math.random() * Math.max(1, room - 2 * m);
+
+    const sr = stageEl.getBoundingClientRect(), nr = document.getElementById('mg-name').getBoundingClientRect();
+    const keepOut = { x: nr.left - sr.left, y: nr.top - sr.top, w: nr.width, h: nr.height };   // the name and tagline in the middle
+    const kr = document.getElementById('mg-keys').getBoundingClientRect();
+    const kb = kr.width ? { x: kr.left - sr.left, y: kr.top - sr.top, w: kr.width, h: kr.height } : null;   // the keyboard, when it is showing
+    const rr = roundEl.getBoundingClientRect();
+    const ri = rr.width ? { x: rr.left - sr.left, y: rr.top - sr.top, w: rr.width, h: rr.height } : null;        // the round counter, when it is showing
+    const extra = [kb, ri].filter(Boolean);
+    const rectsApart = (A, B) => A.x + A.w + slack <= B.x || B.x + B.w + slack <= A.x || A.y + A.h + slack <= B.y || B.y + B.h + slack <= A.y;
+
+    function place(size, force) {                     // try to fit everything at this size
+      playBtn.style.setProperty('--size', size + 'px');
+      const gw = groupEl.offsetWidth, gh = groupEl.offsetHeight;   // play circle + message
+      let g = null;
+      for (let t = 0; t < 400 && !g; t++) {                 // the play circle and its message never cover the central text
+        const c = { x: rand(W - gw), y: rand(H - gh), w: gw, h: gh };
+        if (rectsApart(c, keepOut) && extra.every(R => rectsApart(c, R))) g = c;
+      }
+      if (!g) { if (!force) return null; g = { x: rand(W - gw), y: rand(H - gh) }; }
+      const pts = [];
+      for (let i = 0; i < pads.length; i++) {
+        let best = null, found = 0;
+        for (let t = 0; t < 800 && found < 8; t++) {      // take the first 8 spots that fit and keep the one nearest its neighbours: tight, but different every time
+          const x = rand(W - size), y = rand(H - size), cx = x + size / 2, cy = y + size / 2;
+          const nx = Math.min(Math.max(cx, g.x), g.x + gw), ny = Math.min(Math.max(cy, g.y), g.y + gh);
+          const kd = extra.length ? Math.min(...extra.map(R => Math.hypot(cx - Math.min(Math.max(cx, R.x), R.x + R.w), cy - Math.min(Math.max(cy, R.y), R.y + R.h)))) : Infinity;   // distance to the keyboard / round counter
+          const dg = Math.hypot(cx - nx, cy - ny) - size / 2;   // gap to the play group
+          if (dg < slack || kd < size / 2 + slack || !pts.every(q => Math.hypot(q.x - x, q.y - y) >= size + slack)) continue;
+          found++;
+          const near = Math.min(dg, ...pts.map(q => Math.hypot(q.x - x, q.y - y) - size));
+          if (!best || near < best.near) best = { x, y, near };
+        }
+        if (!best) { if (!force) return null; best = { x: rand(W - size), y: rand(H - size) }; }
+        pts.push({ x: best.x, y: best.y });
+      }
+      return { g, pts };
+    }
+
+    const sizeKey = W + 'x' + H;
+    let size = padSizes[sizeKey], spots = null;
+    if (size) for (let a = 0; a < 40 && !spots; a++) spots = place(size, false);   // a size we already use: try hard before ever shrinking
+    if (!spots) {                                                                   // otherwise: the biggest size that fits reliably (5 shuffles in a row)
+      const start = size || Math.max(60, Math.min(MAX_PAD, Math.min(W, H) * PAD_FRAC));
+      for (let sz = start; sz > 30 && !spots; sz -= 3) {
+        let last = null, allOk = true;
+        for (let a = 0; a < 5 && allOk; a++) { last = place(sz, false); allOk = !!last; }
+        if (allOk) { spots = last; size = sz; }
+      }
+      if (!spots) { size = 30; spots = place(30, true); }
+    }
+    padSizes[sizeKey] = size;
+    groupEl.style.left = spots.g.x + 'px'; groupEl.style.top = spots.g.y + 'px';
+    setDrift(groupEl);
+    pads.forEach((p, i) => {
+      p.style.setProperty('--size', size + 'px');
+      p.style.left = spots.pts[i].x + 'px'; p.style.top = spots.pts[i].y + 'px';
+      setDrift(p);
+    });
+  }
+
+  function setDrift(el) {     // slow wiggle around its spot, own speed and phase
+    const spot = () => { const a = Math.random() * 2 * Math.PI, d = Math.sqrt(Math.random()) * WIGGLE_PX; return [Math.cos(a) * d + 'px', Math.sin(a) * d + 'px']; };   // inside a circle: never more than WIGGLE_PX away, in any direction
+    const [x1, y1] = spot(), [x2, y2] = spot();
+    el.style.setProperty('--dx1', x1); el.style.setProperty('--dy1', y1);
+    el.style.setProperty('--dx2', x2); el.style.setProperty('--dy2', y2);
+    el.style.setProperty('--dur', (7 + Math.random() * 6) + 's');
+    el.style.animationDelay = (-Math.random() * 10) + 's';
+  }
+
+  function layoutPads(count) { pads.forEach((p, i) => p.style.display = i < count ? '' : 'none'); updateKeyboard(); }
+  function idleCount() {      // pads shown outside a game
+    if (currentBank === null) return 4;
+    const b = BANKS[currentBank];
+    return b.pattern === 'drums' ? 4 : Math.min(MAX_PADS, b.files.length);
+  }
+  function setPads(enabled) { pads.forEach(p => p.disabled = !enabled); }
+  function setGameRunning(on) { playBtn.disabled = on; cycleBtn.disabled = on; }
+
+  // ---- metronome ----
+  function click(time, accent) {
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.frequency.value = accent ? 1500 : 1000;
+    g.gain.setValueAtTime(0.3, time);
+    g.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+    osc.connect(g).connect(metroGain);
+    osc.start(time); osc.stop(time + 0.05);
+  }
+
+  function metroSchedule() {
+    const beatS = 60 / tempo;
+    while (metroOrigin + metroBeat * beatS < ctx.currentTime + 0.15) {
+      click(metroOrigin + metroBeat * beatS, metroBeat % 4 === 0); // accent every 4th beat
+      metroBeat++;
+    }
+  }
+
+  function nextDownbeat(time) {   // audio-clock time of the next beat 1 (the accented click) at or after `time`
+    const beatS = 60 / tempo, idx = Math.max(0, Math.ceil((time - metroOrigin) / beatS - 1e-9));
+    return metroOrigin + Math.ceil(idx / 4) * 4 * beatS;
+  }
+
+  function startMetro() {
+    if (metroRunning) return;
+    getCtx();
+    metroRunning = true;
+    metroGain = ctx.createGain(); metroGain.connect(ctx.destination);
+    metroOrigin = ctx.currentTime + 0.1; metroBeat = 0;
+    metroSchedule();
+    metroTimer = setInterval(metroSchedule, 25);
+  }
+
+  function stopMetro() {
+    metroRunning = false; clearInterval(metroTimer);
+    if (metroGain) { metroGain.disconnect(); metroGain = null; }  // cuts clicks already scheduled
+  }
+
+  // ---- the game: idle -> round entry -> play ... -> next round, or back to idle ----
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function sweep(from, to) {                       // the overlay sweeps across, left to right
+    const ms = calm ? 1 : WIPE_MS;
+    if (!wipeEl.animate) return sleep(ms);
+    return wipeEl.animate([{ transform: 'translateX(' + from + ')' }, { transform: 'translateX(' + to + ')' }],
+                          { duration: ms, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'forwards' }).finished.catch(() => {});
+  }
+  async function transition(text, whileCovered, afterwards) {
+    state = 'transition';
+    wipeText.textContent = text; wipeEl.style.display = 'flex';
+    await sweep('-100%', '0%');                    // wipes across and shows its text
+    whileCovered();                                // the scene changes while the screen is covered
+    await sleep(calm ? 400 : HOLD_MS);
+    await sweep('0%', '100%');                     // wipes away, left to right again
+    wipeEl.style.display = 'none';
+    if (wipeEl.getAnimations) wipeEl.getAnimations().forEach(a => a.cancel());
+    afterwards();
+  }
+
+  function setupRound() {                          // round entry, behind the wipe
+    gameRoot.classList.add('mg-ingame');           // the nav and the central text step aside
+    roundEl.textContent = 'round ' + (round + 1) + '/' + LEVELS.length;
+    newMelody();                                   // new bank, new pads, new pad positions
+    setPads(true);
+    say(VERB + ' play');
+  }
+  function roundReady() { state = 'ready'; playBtn.disabled = false; }
+  function enterRound() {
+    setGameRunning(true);
+    transition('round ' + (round + 1), setupRound, roundReady);
+  }
+  function beginRound() {                          // 'press play': the round runs
+    getCtx();
+    if (metroOn) startMetro();                     // the metronome runs while a round is playing
+    playMelody();
+  }
+  function leaveRound() { stopMetro(); playBtn.classList.remove('mg-spinning'); playBtn.disabled = true; setPads(false); state = 'transition'; }
+  function backToIdle() {                          // behind the wipe: the nav and central text come back
+    gameRoot.classList.remove('mg-ingame');
+    round = 0; mistakes = 0; showChances();
+    layoutPads(idleCount()); labelPads(); showBank(); scatterPads();
+    setPads(true); say(VERB + ' to start');
+  }
+  function idleAgain() { state = 'idle'; setGameRunning(false); }
+  async function roundWon() {
+    leaveRound();
+    await sleep(450);                              // let the last note land
+    if (round < LEVELS.length - 1) { round++; enterRound(); }
+    else transition('you win!', backToIdle, idleAgain);
+  }
+  async function gameOver() {
+    leaveRound();
+    await sleep(450);
+    transition('game over', backToIdle, idleAgain);
+  }
+
+  function pickFrom(list) { return list[Math.floor(Math.random() * list.length)]; }
+
+  function makeRhythm(lv) {   // fills exactly one bar
+    let out;
+    for (let attempt = 0; attempt < 50; attempt++) {
+      out = []; let left = BAR_BEATS;
+      while (left > 0) {
+        const d = pickFrom(lv.durations.filter(x => x <= left));
+        out.push(d); left -= d;
+      }
+      if (out.length >= lv.minNotes && out.length <= lv.maxNotes) break;
+    }
+    return out;
+  }
+
+  function pickPad(weights, soFar, maxRepeat) {
+    const total = weights.reduce((a, b) => a + b, 0);
+    let n = 0;
+    for (let tries = 0; tries < 20; tries++) {
+      let r = Math.random() * total;
+      n = 0;
+      while (r >= weights[n]) { r -= weights[n]; n++; }
+      const tail = soFar.slice(-maxRepeat);
+      if (!(tail.length === maxRepeat && tail.every(x => x === n))) break;
+    }
+    return n;
+  }
+
+  function newMelody() {
+    const oldTempo = tempo;
+    currentBank = pickBank();   // new round, new random bank
+    tempo = bankTempo(currentBank);
+    if (metroRunning && tempo !== oldTempo) { stopMetro(); startMetro(); }   // metronome follows the new tempo
+    const lv = LEVELS[round % LEVELS.length];
+    const drums = currentBank !== null && BANKS[currentBank].pattern === 'drums';
+    rhythm = makeRhythm(lv); melody = [];
+    let beat = 0;               // position in the bar, so drum accents land on beats
+    rhythm.forEach((d, k) => {
+      let n;
+      if (drums) {
+        const accent = DRUM_ACCENTS[beat % BAR_BEATS];
+        if (k === 0) n = 0;                                            // always start on the kick
+        else if (accent !== undefined && Math.random() < lv.accentChance) n = accent;
+        else n = pickPad(lv.drumWeights, melody, 2);
+      } else {
+        n = pickPad(new Array(lv.pitches).fill(1), melody, 2);
+      }
+      melody.push(n); beat += d;
+    });
+    // melodic: make sure the newest pad is used at least once
+    if (!drums && lv.pitches > 4 && !melody.includes(lv.pitches - 1)) {
+      melody[Math.floor(Math.random() * melody.length)] = lv.pitches - 1;
+    }
+    layoutPads(drums ? 4 : lv.pitches);
+    labelPads(); showBank();
+    scatterPads();   // new round, new locations
+  }
+
+  function playMelody(replay) {   // replay = hear the same melody again mid-round
+    exportPattern = {             // remember what's being played, for 'generate midi'
+      melody: melody.slice(), rhythm: rhythm.slice(),
+      drums: currentBank !== null && BANKS[currentBank].pattern === 'drums',
+      keys: keysFor(currentBank).slice(), tempo
+    };
+    midiBtn.disabled = false;
+    dbg(replay ? 'REPLAY' : 'NEW PATTERN', '| round', round + 1, '| bank', currentBank === null ? '-' : bankTitle(currentBank), '| tempo', tempo, '| metronome', metroRunning);
+    dbg('  notes:', melody.map(padName).join(' '));
+    dbg('  beats:', rhythm.join(' '));
+    pos = 0; holdUntil = 0; if (!replay) armed = true; state = 'playback';
+    setGameRunning(true); setPads(false); playBtn.classList.add('mg-spinning');   // the reel turns while the pattern plays
+    if (replay && metroRunning) say('wait');   // tapped mid-bar: wait for the next beat 1
+    ensureBank(currentBank).then(() => {
+      const beatMs = 60000 / tempo, c = getCtx();
+      const bufs = bankBuffers[currentBank] || [];
+      dbg('  samples:', pads.map((p, i) => p.style.display === 'none' ? null : 'pad' + (i + 1) + '=' + String((BANKS[currentBank].files[i] || '?')).split('/').pop() + (bufs[i] ? '' : ' MISSING')).filter(Boolean).join(' '), '| audio', c.state, 'latency', Math.round((c.baseLatency || 0) * 1000) + 'ms');
+      // a one-bar count (1 2 3 4) before the pattern, starting on beat 1 of the metronome's bar, or straight away if the metronome is off
+      const first = metroRunning ? nextDownbeat(c.currentTime + 0.05) : c.currentTime + 0.1;
+      let t = (first - c.currentTime) * 1000;
+      for (let k = 0; k < 4; k++) setTimeout(() => say(String(k + 1)), t + k * beatMs);
+      t += 4 * beatMs;
+      setTimeout(() => say('listen…'), t);        // the pattern starts here
+      melody.forEach((n, k) => {
+        const ms = rhythm[k] * beatMs;
+        setTimeout(() => { tone(n); dbg('  play', (k + 1) + '/' + melody.length, padName(n)); if (showVisual) flash(n, Math.min(180, ms * 0.5), true); }, t);
+        t += ms;
+      });
+      setTimeout(() => {
+        dbg('  your turn: pads live, expecting note 1', padName(melody[0]));
+        state = 'input'; setPads(true); playBtn.disabled = false; playBtn.classList.remove('mg-spinning');   // play = hear it again; the reel stops
+        say('your turn');
+      }, t);
+    });
+  }
+
+  function showChances() {      // one icon per chance left; lost ones fade out
+    const icons = document.getElementById('mg-chanceIcons');
+    if (icons.children.length !== MAX_MISTAKES) {
+      icons.innerHTML = `<span class="mg-chance">${CHANCE_ICON}</span>`.repeat(MAX_MISTAKES);
+    }
+    [...icons.children].forEach((el, i) => el.classList.toggle('mg-gone', i >= MAX_MISTAKES - mistakes));
+    chancesEl.setAttribute('aria-label', `${MAX_MISTAKES - mistakes} lives left`);
+  }
+
+  const retryGap = () => RETRY_GAP_BEATS * 60000 / tempo;
+  function fail(text) {
+  holdUntil = performance.now() + retryGap();
+    if (!armed) {   // a mistake was just counted: no more count until a correct note is played
+      pos = 0;   // no penalty, current message stays
+      dbg('  (no life lost: no correct note since the last mistake)');
+      return;
+    }
+    armed = false;
+    mistakes++;
+    dbg('  life lost:', mistakes + '/' + MAX_MISTAKES, '| back to note 1');
+    showChances();
+    if (mistakes >= MAX_MISTAKES) return gameOver();
+    pos = 0;
+    say(text, 'try again');   // 'wrong note!' or 'wrong rhythm!', then 'try again' after 2 seconds
+  }
+
+  function onPad(i, src) {
+    if (state === 'playback' || state === 'transition') { dbg('ignored', padName(i), src, '(state ' + state + ')'); return; }
+    tone(i); flash(i);
+    if (state !== 'input') { dbg('free play', padName(i), src, '(state ' + state + ')'); return; }
+    const now = performance.now();
+    if (now < holdUntil) { dbg('ignored', padName(i), src, '(locked after a mistake: pause ' + Math.round(retryGap()) + 'ms, then restart)'); holdUntil = now + retryGap(); return; }   // still playing on after a slip: wait for a pause, then start again from the top
+    const want = melody[pos], where = (pos + 1) + '/' + melody.length;
+    if (i !== want) { dbg('X WRONG NOTE  pressed', padName(i), src, '| wanted', padName(want), 'at note', where, '| armed', armed); return fail('wrong note!'); }
+    let gapInfo = '';
+    if (pos > 0) {
+      const gap = now - lastPress, expected = rhythm[pos - 1] * 60000 / tempo, tol = Math.max(TIMING_MIN_MS, expected * TIMING_PCT);
+      gapInfo = '| gap ' + Math.round(gap) + 'ms, wanted ' + Math.round(expected) + ' +-' + Math.round(tol);
+      if (JUDGE_RHYTHM && Math.abs(gap - expected) > tol) { dbg('X WRONG RHYTHM  right note', padName(i), src, 'at note', where, gapInfo, '| off by', Math.round(gap - expected) + 'ms'); return fail('wrong rhythm!'); }
+    }
+    dbg('ok', padName(i), src, 'note', where, gapInfo);
+    lastPress = now;
+    armed = true;
+    pos++;
+    if (pos === melody.length) { dbg('pattern complete'); roundWon(); }
+  }
+
+  // ---- free play: cycle banks ----
+  function cycleSounds() {
+    if (state !== 'idle') return;
+    if (!BANKS.length) return;
+    currentBank = pickBank(); tempo = bankTempo(currentBank);
+    layoutPads(idleCount()); labelPads(); showBank(); scatterPads();   // new pad positions with every press
+    const b = currentBank;
+    bankEl.textContent = `loading ${bankTitle(b)}…`;
+    ensureBank(b).then(() => { if (currentBank === b) showBank(); });
+  }
+
+  document.addEventListener('keyup', e => {      // stops a focused button from also clicking itself on space
+    if ((e.code === 'Space' || e.key === ' ') && stageEl.isConnected && !document.querySelector('#memgame dialog[open]')
+        && !(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) e.preventDefault();
+  }, { signal });
+
+  // ---- buttons ----
+  visualBtn.addEventListener('click', () => {
+    showVisual = !showVisual;
+    visualBtn.setAttribute('aria-pressed', showVisual);
+  });
+
+  metroBtn.addEventListener('click', () => {
+    metroOn = !metroOn;
+    metroBtn.setAttribute('aria-pressed', metroOn);
+    if (state === 'playback' || state === 'input') { if (metroOn) startMetro(); else stopMetro(); } // switch live mid-round
+  });
+
+  // ---- shake the phone to change the sounds (touch screens only) ----
+  // The first tap on 'cycle' asks for motion access (iOS shows its own prompt, Android just allows it). After that, a shake does the same as the button.
+  let shakeAsked = false, shakeOn = false, gotMotion = false, lastShake = -Infinity, lastAcc = null;
+  function onMotion(e) {
+    const a = e.accelerationIncludingGravity;
+    if (!a || a.x == null) return;
+    gotMotion = true;
+    const now = performance.now();
+    if (lastAcc) {
+      const d = Math.abs(a.x - lastAcc.x) + Math.abs(a.y - lastAcc.y) + Math.abs(a.z - lastAcc.z);   // how sharply the phone's acceleration just changed
+      if (d > SHAKE_THRESHOLD && now - lastShake > SHAKE_COOLDOWN_MS && state === 'idle' && !document.querySelector('#memgame dialog[open]')) {
+        lastShake = now; dbg('shake', Math.round(d));
+        cycleSounds();
+      }
+    }
+    lastAcc = { x: a.x, y: a.y, z: a.z };
+  }
+  function enableShake() {
+    shakeOn = true;
+    window.addEventListener('devicemotion', onMotion, { signal });
+    say('shake your phone to change sounds', VERB + ' to start');
+    setTimeout(() => { if (!gotMotion) { shakeOn = false; window.removeEventListener('devicemotion', onMotion); say('shake isn’t available here', VERB + ' to start'); } }, 2500);   // no motion events arrived: the browser or the page's frame isn't allowing them
+  }
+  function askForShake() {      // must run straight from the tap: iOS only shows its prompt from a user gesture
+    if (!tapScreen || shakeAsked || shakeOn || typeof DeviceMotionEvent === 'undefined') return;
+    shakeAsked = true;          // ask once per visit
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+      say('allow motion access to shake for new sounds');
+      DeviceMotionEvent.requestPermission().then(r => {
+        dbg('motion permission', r);
+        if (r === 'granted') enableShake(); else say('shake is off: motion access was not allowed', VERB + ' to start');
+      }).catch(() => say('shake isn’t available here', VERB + ' to start'));
+    } else enableShake();
+  }
+  cycleBtn.addEventListener('click', () => { cycleSounds(); askForShake(); });
+  playBtn.addEventListener('click', () => {
+    if (state === 'input') playMelody(true);                 // your turn: hear the pattern again
+    else if (state === 'ready') beginRound();                // 'press play'
+    else if (state === 'idle') { getCtx(); mistakes = 0; round = 0; showChances(); enterRound(); }   // 'press to start': round entry
+  });
+
+  midiBtn.addEventListener('click', downloadMidi);
+  currentBank = pickBank();   // start on a random bank, so one is always showing
+  tempo = bankTempo(currentBank);
+  layoutPads(idleCount()); labelPads(); showBank(); showChances(); scatterPads();
+  const relayout = () => { if (state === 'idle' || state === 'ready') scatterPads(); };
+  const ro = window.ResizeObserver ? new ResizeObserver(relayout) : null;   // follows the widget's size
+  if (ro) ro.observe(stageEl); else window.addEventListener('resize', relayout, { signal });
+  const firstBank = currentBank;   // load this one straight away, then the others
+  if (firstBank !== null) bankEl.textContent = `loading ${bankTitle(firstBank)}…`;
+  ensureBank(firstBank).then(() => {
+    if (currentBank === firstBank) showBank();
+    if (PRELOAD_ALL) BANKS.forEach((_, b) => ensureBank(b));
+  });
+  // ---- popups ----
+  const dlgs = [document.getElementById('mg-dlg-about'), document.getElementById('mg-dlg-how')];
+  document.getElementById('mg-about-btn').addEventListener('click', () => openSheet(dlgs[0]));
+  document.getElementById('mg-how-btn').addEventListener('click', () => openSheet(dlgs[1]));
+
+  function openSheet(d) {                                                                    // slides up with the bottom third showing
+    if (d.open) { clearTimeout(d._ct); delete d.dataset.closing; d.style.transform = ''; d.classList.add('mg-open'); return; }   // reopened mid-slide-down
+    delete d.dataset.closing; d.showModal(); d.focus({ preventScroll: true }); void d.offsetHeight; d.classList.add('mg-open');   // focus the card itself, not the x button
+  }
+  function closeSheet(d) {                                                                   // slides down, then closes
+    if (!d.open || d.dataset.closing) return;
+    d.dataset.closing = '1'; d.classList.remove('mg-open'); d.style.transition = ''; d.style.transform = '';
+    d._ct = setTimeout(() => { d.close(); delete d.dataset.closing; }, 300);
+  }
+  dlgs.forEach(d => {
+    const body = d.querySelector('.mg-dlg-body');
+    const H = () => d.offsetHeight, P = () => Math.max(0, d.offsetHeight - 0.3334 * window.innerHeight);   // P: where the card sits when it opens
+    let ty = 0, wheelTimer = null, raf = 0, yPrev = null, vy = 0, tPrev = 0;
+    d.addEventListener('click', e => { if (e.target === d) closeSheet(d); });            // tap outside the card
+    d.addEventListener('cancel', e => { e.preventDefault(); closeSheet(d); });           // escape key
+    d.addEventListener('close', () => { delete d.dataset.closing; d.classList.remove('mg-open'); d.style.transform = ''; d.style.transition = ''; });
+    d.querySelector('.mg-close').addEventListener('click', () => closeSheet(d));
+
+    // The card and its text follow your scroll as one, like a page that scrolls under your finger: scrolling down lifts
+    // the card first, then scrolls the text; scrolling back up scrolls the text to the top, then lowers the card.
+    // The card stays wherever you stop. Only below its opening position does it spring back or close.
+    function grab() {                        // take over from the css transition: freeze the card exactly where it is
+      let cur;
+      try { cur = new DOMMatrix(getComputedStyle(d).transform).m42; } catch (err) { cur = NaN; }
+      if (!(cur >= 0)) { const m = /translateY\(([-\d.]+)px\)/.exec(d.style.transform); cur = m ? parseFloat(m[1]) : (d.classList.contains('mg-open') ? P() : H()); }
+      ty = Math.min(H(), cur); d.style.transition = 'none'; d.style.transform = 'translateY(' + ty + 'px)';
+    }
+    function moveBy(step) {                  // step > 0: scrolling down. step < 0: scrolling back up.
+      if (step > 0) { const lift = Math.min(ty, step); ty -= lift; body.scrollTop += step - lift; }
+      else if (step < 0) { const used = Math.min(body.scrollTop, -step); body.scrollTop -= used; ty = Math.min(H(), ty - step - used); }
+      d.style.transform = 'translateY(' + ty + 'px)';
+    }
+    function settle() {
+      d.style.transition = '';
+      if (ty <= P() + 1) { d.style.transform = 'translateY(' + ty + 'px)'; return; }   // stays exactly where you stopped
+      if (ty > P() + (H() - P()) * 0.5) return closeSheet(d);                          // pulled below the opening position: past halfway out = closes
+      d.style.transform = ''; d.classList.add('mg-open');                              // otherwise springs back
+    }
+    function coast(v) {                      // keep moving after a flick (v: px/ms, positive = scrolling down), then settle
+      cancelAnimationFrame(raf);
+      (function step() {
+        v *= 0.95;
+        if (Math.abs(v) < 0.03) return settle();
+        const before = ty, st = body.scrollTop;
+        moveBy(v * 16);
+        if (ty === before && body.scrollTop === st) return settle();                   // hit an end
+        raf = requestAnimationFrame(step);
+      })();
+    }
+
+    // mouse wheel / trackpad
+    d.addEventListener('wheel', e => {
+      e.preventDefault(); cancelAnimationFrame(raf);
+      if (!wheelTimer) grab();
+      moveBy(e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY);
+      clearTimeout(wheelTimer); wheelTimer = setTimeout(() => { wheelTimer = null; settle(); }, 140);
+    }, { passive: false });
+
+    // touch
+    d.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) return;
+      cancelAnimationFrame(raf); grab();
+      yPrev = e.touches[0].clientY; tPrev = Date.now(); vy = 0;
+    }, { passive: true });
+    d.addEventListener('touchmove', e => {
+      if (yPrev === null) return;
+      e.preventDefault();
+      const y = e.touches[0].clientY, now = Date.now();
+      moveBy(yPrev - y);
+      vy = ((y - yPrev) / Math.max(1, now - tPrev)) * 0.6 + vy * 0.4;   // smoothed speed, down is positive
+      yPrev = y; tPrev = now;
+    }, { passive: false });
+    const end = () => {
+      if (yPrev === null) return;
+      yPrev = null;
+      if (Date.now() - tPrev > 80) vy = 0;                              // held still before letting go
+      coast(-vy);
+    };
+    d.addEventListener('touchend', end); d.addEventListener('touchcancel', end);
+  });
+  document.querySelectorAll('#memgame [data-from]').forEach(el => {                // legend icons, copied from the real buttons
+    const svg = document.getElementById(el.dataset.from).querySelector('svg');
+    if (svg) el.appendChild(svg.cloneNode(true));
+  });
+
+  // ---- reveal: where a pad covers the name, the word shows through in the pad's opposite colour ----
+  // an off-white pad shows the word in orange; a lit (orange) pad shows it in off-white. Mid-fade, both show in proportion.
+  let alive = true, lastMask = '', lastMask2 = '';
+  const nameEl = document.getElementById('mg-name'), beforeBottom = document.getElementById('mg-bottom');
+  const makeReveal = id => { const c = nameEl.cloneNode(true); c.id = id; c.setAttribute('aria-hidden', 'true'); nameEl.parentNode.insertBefore(c, beforeBottom); return c; };
+  const rev = makeReveal('mg-name-rev'), rev2 = makeReveal('mg-name-rev2');
+  const rootEl = document.getElementById('memgame');
+  const probe = document.createElement('i'); probe.hidden = true; rootEl.appendChild(probe);
+  const greenOf = colour => { probe.style.backgroundColor = colour; const m = /rgba?\(\d+,\s*(\d+)/.exec(getComputedStyle(probe).backgroundColor); return m ? +m[1] : 0; };   // green channel of any css colour
+  const gRest = greenOf('var(--mg-pad-fill)'), gLit = greenOf('var(--mg-pad-lit-fill)');   // read from the css, so colours are declared once
+  const fadeRaw = getComputedStyle(rootEl).getPropertyValue('--mg-fade').trim();   // the pad fade length (default .5s), read once
+  const fadeMs = fadeRaw ? (/ms$/.test(fadeRaw) ? parseFloat(fadeRaw) : parseFloat(fadeRaw) * 1000) || 500 : 500;
+  function litness(p) {                    // 0 = resting colour (off-white), 1 = fully lit (orange); follows the fade back
+    if (p === playBtn) return 0;
+    if (!p.classList.contains('mg-lit') && performance.now() > (p._fadeEnd || 0)) return 0;   // at rest: no style lookup needed
+    const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(getComputedStyle(p).backgroundColor || '');
+    if (m && gRest !== gLit) return Math.min(1, Math.max(0, (gRest - +m[2]) / (gRest - gLit)));
+    return p.classList.contains('mg-lit') ? 1 : 0;
+  }
+  (function updateReveal() {
+    if (!alive || !rev.isConnected) return;
+    if (gameRoot.classList.contains('mg-ingame')) return requestAnimationFrame(updateReveal);   // the name is hidden during a game: nothing to mask
+    const nr = rev.getBoundingClientRect();
+    const k = rev.offsetWidth / nr.width || 1;                 // allows for any scaling around the widget
+    const resting = [], lit = [];
+    pads.concat(playBtn).forEach(p => {   // the play circle is a pad too
+      if (p.style.display === 'none') return;
+      const r = p.getBoundingClientRect(), rad = r.width / 2 * k;
+      const cx = (r.left - nr.left) * k + rad, cy = (r.top - nr.top) * k + rad, a = litness(p);
+      const circle = alpha => 'radial-gradient(circle at ' + cx + 'px ' + cy + 'px, rgba(0,0,0,' + alpha.toFixed(3) + ') ' + (rad - 0.5) + 'px, transparent ' + (rad + 0.5) + 'px)';
+      if (a < 0.999) resting.push(circle(1 - a));
+      if (a > 0.001) lit.push(circle(a));
+    });
+    const none = 'linear-gradient(transparent, transparent)';   // 'none' would show the whole word
+    const m1 = resting.join(',') || none, m2 = lit.join(',') || none;
+    if (m1 !== lastMask) { lastMask = m1; rev.style.webkitMaskImage = m1; rev.style.maskImage = m1; }
+    if (m2 !== lastMask2) { lastMask2 = m2; rev2.style.webkitMaskImage = m2; rev2.style.maskImage = m2; }
+    requestAnimationFrame(updateReveal);
+  })();
+
+  return function destroy() { alive = false; stopMetro(); ac.abort(); if (ro) ro.disconnect(); try { if (ctx) ctx.close(); } catch (err) {} };
+  }
+  // The Code widget may add the html and the script separately, so wait for the game's container.
+  var tries = 0;
+  (function start() {
+    var root = document.getElementById('memgame');
+    if (!root) { if (tries++ < 100) setTimeout(start, 100); return; }
+    if (root.dataset.started) return;
+    root.dataset.started = '1';
+    var anchor = null;
+    if (FULLSCREEN) {   // move out of the widget, so its box (and any page scaling) can't constrain the game
+      anchor = document.createElement('span'); anchor.hidden = true;
+      root.parentNode.insertBefore(anchor, root);
+      document.body.appendChild(root);
+      root.classList.add('mg-full');
+    }
+    var destroy = boot();
+    if (anchor) {       // if the widget's content is cleared (visitor changes page), tidy up
+      var watch = setInterval(function () {
+        if (!anchor.isConnected) { clearInterval(watch); destroy(); root.remove(); }
+      }, 500);
+    }
+  })();
+})();
+</script>
