@@ -150,8 +150,9 @@
 #mg-chances .mg-chance.mg-gone { opacity:0; }
 #memgame button.mg-icon { background:none; border:0; padding:.7em calc(var(--mg-icon-gap) / 2); cursor:pointer; color:var(--mg-fg); transition:opacity .2s ease; }
 #memgame button.mg-icon svg { display:block; height:20px; width:auto; }
-#memgame button.mg-icon[aria-pressed="false"], #memgame button.mg-icon:disabled { opacity:.35; }
-#memgame button.mg-icon:disabled { cursor:default; }
+#memgame button.mg-icon[aria-pressed="false"], #memgame button.mg-icon:disabled, #memgame button.mg-icon[aria-disabled="true"] { opacity:.35; }
+#memgame button.mg-icon:disabled, #memgame button.mg-icon[aria-disabled="true"] { cursor:default; }
+#memgame button.mg-icon[aria-disabled="true"] { pointer-events:none; }   /* cycle, once shake is on: dimmed and not tappable */
 #memgame #mg-metro { margin-left:calc(var(--mg-gap-point-metro) - var(--mg-icon-gap)); }
 #memgame #mg-midi { margin-left:calc(var(--mg-gap-metro-midi) - var(--mg-icon-gap)); }
 </style>
@@ -258,7 +259,7 @@
   const TIMING_PCT = 0.35;          // allowed timing error, as a share of the gap between notes
   const TIMING_MIN_MS = 50;         // but never tighter than this
   const RETRY_GAP_BEATS = 1.5;      // after a mistake, presses are ignored until the player has been quiet this long (in beats), so a pattern carried on after a slip can't restart itself by accident
-  const DEBUG = false;               // true = log every press and the pattern, to the console and a panel on screen. Set false before publishing.
+  const DEBUG = true;               // true = log every press and the pattern, to the console and a panel on screen. Set false before publishing.
   const END_FADE_MS = 15;            // quick fade-out over the end of every sample, so it never stops on a click (0 = off)
   const SHAKE_THRESHOLD = 28;       // phone shake to change sounds: how hard a shake must be (lower = more sensitive; walking is well under 15)
   const SHAKE_COOLDOWN_MS = 900;    // ...and the least time between two shakes
@@ -913,13 +914,17 @@
     }
     lastAcc = { x: a.x, y: a.y, z: a.z };
   }
+  function setShakeLock(on) {   // shake is on: the cycle button is dimmed and can't be tapped (the same look as a disabled button)
+    if (on) { cycleBtn.setAttribute('aria-disabled', 'true'); cycleBtn.tabIndex = -1; }
+    else { cycleBtn.removeAttribute('aria-disabled'); cycleBtn.removeAttribute('tabindex'); }
+  }
   function enableShake() {
-    shake = 'on';
+    shake = 'on'; setShakeLock(true);
     window.addEventListener('devicemotion', onMotion, { signal });
     say('shake to change sounds', VERB + ' to start');
     setTimeout(() => {          // no motion events arrived: the browser or the page's frame isn't allowing them
       if (gotMotion) return;
-      shake = 'failed'; window.removeEventListener('devicemotion', onMotion);
+      shake = 'failed'; setShakeLock(false); window.removeEventListener('devicemotion', onMotion);
       say('no shake here: tap to cycle', VERB + ' to start');
     }, 2500);
   }
