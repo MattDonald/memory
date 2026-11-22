@@ -16,11 +16,9 @@
    Set your fonts and sizes here. The rest of the stylesheet reads from these.
    To use a custom font, load it first (an @font-face, or a <link>, above this <style>), then name it below.
    Sizes in em are relative to --mg-size-base. */
-
-@font-face { font-family: BNRiley; src: url("https://mattdonald.github.io/memory/BNRiley.otf") format("opentype"); }
 #memgame {
   --mg-font: system-ui, sans-serif;        /* the font for everything */
-  --mg-font-h1: BNRiley;            /* a different font just for the h1 (mattdonald) */
+  --mg-font-h1: var(--mg-font);            /* a different font just for the h1 (mattdonald) */
   --mg-size-base: 16px;                    /* base size: every em size below is relative to this */
   --mg-size-h1: clamp(1.5em, 7vw, 3em);    /* h1: mattdonald */
   --mg-size-h2: 1em;                       /* h2: always creating */
@@ -171,10 +169,12 @@
   --mg-px: 4px;                                          /* chunk size for the small things (pill corners); pads are drawn on a 20-cell grid by the script */
   --mg-pad-fill: var(--mg-fg); --mg-pad-lit-fill: var(--mg-bg);   /* each theme is exactly two colours: light = off-white + orange, dark = orange + off-black */
   --mg-pad-opacity: 1; --mg-pad-lit-filter: none;
+  --mg-weight-key: 800; --mg-weight-h1: 800; --mg-weight-h2: 800; --mg-weight-h3: 800; font-weight: 800;
   --mg-tile: calc(4 * var(--mg-dpx, 2px));                 /* one 4x4 Bayer dither tile; --mg-dpx (one dither dot) is set by the script from BLOCKS */
   font-family: var(--mg-font); -webkit-font-smoothing: none; font-smooth: never; text-rendering: optimizeSpeed;
 }
 #memgame svg { shape-rendering: crispEdges; }
+#memgame button { font-weight: inherit; }
 #memgame .mg-pad { border-radius: 0; clip-path: var(--mg-pad-clip); }                        /* stepped circle, set by the script */
 #mg-play .mg-reel { clip-path: var(--mg-pad-clip); }
 /* Lit: the whole pad flips to the background colour and drops one cell onto its shadow, like a pressed button.
@@ -206,7 +206,8 @@
   translate: var(--mg-px) var(--mg-px); -webkit-mask: var(--mg-shadow-dither) 0 0 / var(--mg-tile) var(--mg-tile); mask: var(--mg-shadow-dither) 0 0 / var(--mg-tile) var(--mg-tile); }
 #mg-wipe { background: transparent; color: var(--mg-fg); }   /* the overlay is drawn by the script, as dithered cells */
 #mg-wipe-canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; }
-#mg-wipe-text { position: relative; }
+#mg-wipe-text { position: relative; isolation: isolate; padding: .3em 1em; background: var(--mg-bg); clip-path: var(--mg-notch); }   /* the pill's border: this fill, with the inner pill drawn over it */
+#mg-wipe-text::before { content: ''; position: absolute; inset: var(--mg-px); z-index: -1; background: var(--mg-fg); clip-path: var(--mg-notch); }
 #mg-keys { --mg-key-dim: 1; }
 #memgame.mg-ingame #mg-keys { display: none; }   /* no keyboard reference during a game: the keys are on the pads */
 #mg-keys .mg-key { border-radius: 0; clip-path: var(--mg-key-clip); }
@@ -239,7 +240,7 @@
 <div id="mg-stage"><div id="mg-pads"></div>
 <div id="mg-playgroup">
 <button id="mg-play" aria-label="play"><svg class="mg-reel" viewBox="0 0 80 80" aria-hidden="true" focusable="false"><path d="M71.0097 14.7024C66.3698 9.02156 60.257 4.72522 53.3393 2.28302C46.4216 -0.159175 38.9654 -0.653223 31.7858 0.854886C24.6062 2.36299 17.9795 5.81521 12.6302 10.8341C7.28089 15.8531 3.41484 22.2455 1.45468 29.3127C-0.505479 36.3799 -0.484292 43.8497 1.51592 50.9057C3.51614 57.9616 7.41838 64.3321 12.7961 69.3206C18.1738 74.3091 24.8199 77.7237 32.008 79.1911C39.196 80.6585 46.6493 80.1222 53.553 77.6408C59.5696 75.4681 64.9781 71.8865 69.3259 67.1957C73.6738 62.5049 76.8346 56.8413 78.5438 50.6789C80.253 44.5166 80.4609 38.0346 79.1501 31.7755C77.8393 25.5163 75.048 19.662 71.0097 14.7024ZM22.6551 10.2704C23.5806 9.61137 24.7299 9.34653 25.8506 9.5341C26.9713 9.72167 27.9717 10.3463 28.632 11.2707C28.8035 11.5141 28.9506 11.7737 29.0713 12.0459L32.6328 20.2105C32.963 20.9699 33.0002 21.8246 32.7374 22.6098C32.4745 23.395 31.9301 24.0551 31.2091 24.4628C30.4881 24.8705 29.6417 24.9969 28.833 24.8177C28.0244 24.6384 27.3107 24.1662 26.8298 23.492L21.6536 16.2404C21.3269 15.7828 21.0936 15.2653 20.9672 14.7175C20.8407 14.1697 20.8235 13.6023 20.9165 13.0479C21.0095 12.4934 21.2109 11.9627 21.5093 11.4862C21.8076 11.0096 22.1969 10.5965 22.6551 10.2704ZM32.2955 59.5566L28.5948 67.6592C28.1229 68.6919 27.2601 69.495 26.1961 69.8921C25.1321 70.2891 23.9539 70.2477 22.9205 69.7768C21.8871 69.3058 21.083 68.444 20.6849 67.3808C20.2868 66.3175 20.3273 65.1397 20.7976 64.1062C20.9228 63.8361 21.0744 63.579 21.2502 63.3387L26.5498 56.1765C27.0422 55.5106 27.7638 55.0505 28.5754 54.8851C29.3871 54.7196 30.2313 54.8604 30.9452 55.2804C31.6591 55.7004 32.1921 56.3698 32.4415 57.1594C32.6909 57.9491 32.6389 58.803 32.2955 59.5566ZM70.5291 44.4694C70.2323 44.4961 69.9336 44.4936 69.6373 44.4618L60.7778 43.4583C59.9546 43.3656 59.1949 42.9712 58.6456 42.3514C58.0963 41.7315 57.7962 40.9302 57.8034 40.1021C57.8106 39.274 58.1245 38.478 58.6845 37.8678C59.2445 37.2575 60.0109 36.8764 60.8355 36.798L69.7113 35.9481C70.2712 35.8941 70.8363 35.9509 71.3742 36.1153C71.9121 36.2796 72.4124 36.5483 72.8464 36.906C73.2804 37.2637 73.6396 37.7034 73.9036 38.1999C74.1675 38.6964 74.3311 39.2401 74.3848 39.7998C74.4385 40.3595 74.3814 40.9243 74.2166 41.462C74.0519 41.9996 73.7829 42.4995 73.4248 42.9332C73.0667 43.3668 72.6267 43.7257 72.1299 43.9893C71.633 44.2529 71.0891 44.416 70.5291 44.4694Z"/></svg><svg class="mg-playicon" viewBox="0 0 36 40" aria-hidden="true" focusable="false"><path d="M34.9883 18.2866L2.98885 0.260982C2.685 0.0890919 2.3406 -0.000933781 1.9903 7.30316e-06C1.64001 0.000948388 1.29617 0.0928124 0.993278 0.266332C0.690382 0.439852 0.439105 0.688954 0.264754 0.988567C0.0904029 1.28818 -0.000887906 1.62773 1.40393e-05 1.97317V38.0277C-0.00130123 38.3732 0.0898205 38.713 0.264167 39.0127C0.438514 39.3125 0.689904 39.5616 0.993033 39.7349C1.29616 39.9083 1.64029 39.9997 1.9907 40C2.3411 40.0003 2.68539 39.9095 2.98885 39.7368L34.9883 21.7111C35.2954 21.5394 35.5509 21.2905 35.7286 20.9897C35.9063 20.6889 36 20.347 36 19.9989C36 19.6507 35.9063 19.3088 35.7286 19.008C35.5509 18.7072 35.2954 18.4583 34.9883 18.2866Z"/></svg></button>
-<div class="mg-msgslot"><p id="mg-message">press to start</p></div>
+<div class="mg-msgslot"><p id="mg-message">press space to start</p></div>
 </div></div>
 <!-- the two reveal copies of the name are cloned from #mg-name by the script: edit the name above only -->
 <div id="mg-bottom">
@@ -318,8 +319,8 @@
   const BPM = 120;                  // default tempo (a bank can set its own with bpm)
   let tempo = BPM;                  // tempo in use: follows the current bank
   const MAX_MISTAKES = 3;           // game over on this many mistakes (lives carry across the rounds)
-  const WIPE_MS = 450;              // how long each wipe across the screen takes
-  const HOLD_MS = 850;             // how long the screen stays covered, showing its text (round 2, you win!...)
+  const WIPE_MS = 550;              // how long each wipe across the screen takes
+  const HOLD_MS = 1300;             // how long the screen stays covered, showing its text (round 2, you win!...)
   const JUDGE_RHYTHM = true;        // false = judge pitch order only
   const TIMING_PCT = 0.35;          // allowed timing error, as a share of the gap between notes
   const TIMING_MIN_MS = 50;         // but never tighter than this
@@ -404,8 +405,10 @@
   const gameRoot = document.getElementById('memgame'), roundEl = document.getElementById('mg-round');
   const wipeEl = document.getElementById('mg-wipe'), wipeText = document.getElementById('mg-wipe-text');
   const tapScreen = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
-  const VERB = tapScreen ? 'tap' : 'press';        // 'press play' with a mouse, 'tap play' on a touch screen
-  msg.textContent = VERB + ' to start';
+  const MSG_START = tapScreen ? 'tap to start' : 'press space to start';   // the idle message
+  const MSG_PLAY = tapScreen ? 'tap to play' : 'press space to play';      // between rounds
+  gameRoot.style.setProperty('--mg-msg-slot', tapScreen ? '10em' : '14em');   // room for the longest message (the desktop ones are longer)
+  msg.textContent = MSG_START;
   let msgTimer = null;
   function say(text, after) {      // show a message. With `after`, it changes to that message 2 seconds later (any newer message cancels this)
     clearTimeout(msgTimer); msg.textContent = text;
@@ -799,16 +802,18 @@
     wipeCanvas.width = cols; wipeCanvas.height = rows;
     const rgb = (/(\d+)\D+(\d+)\D+(\d+)/.exec(getComputedStyle(wipeEl).color) || [0, 0, 0, 0]).slice(1, 4).map(Number);
     const img = c2.createImageData(cols, rows), frames = calm ? 1 : Math.max(2, Math.round(ms / 45)), R = 0.6;   // R = how soft the dithered edge is
+    const keyIn = new Float32Array(cols * rows), keyOut = new Float32Array(cols * rows);   // per cell: the moment (in sweep time) it switches on / off, from its place on screen and its Bayer threshold
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+      const i = y * cols + x, xn = (y / rows) * 0.85 + (x / cols) * 0.15, thr = (bayer[y & 3][x & 3] + 0.5) / 16;   // mostly top to bottom, a little left to right
+      keyIn[i] = xn + thr * R; keyOut[i] = xn + (1 - thr) * R;
+      img.data[i * 4] = rgb[0]; img.data[i * 4 + 1] = rgb[1]; img.data[i * 4 + 2] = rgb[2];
+    }
+    const key = goingIn ? keyIn : keyOut;
     return new Promise(done => {
       let f = 0;
       (function draw() {
-        const t = Math.min(1, f / frames);
-        for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
-          const xn = (y / rows) * 0.85 + (x / cols) * 0.15;                       // mostly top to bottom, a little left to right
-          let v = Math.min(1, Math.max(0, (t * (1 + R) - xn) / R)); if (!goingIn) v = 1 - v;
-          const i = (y * cols + x) * 4;
-          img.data[i] = rgb[0]; img.data[i + 1] = rgb[1]; img.data[i + 2] = rgb[2]; img.data[i + 3] = v > (bayer[y & 3][x & 3] + 0.5) / 16 ? 255 : 0;
-        }
+        const edge = Math.min(1, f / frames) * (1 + R);
+        for (let i = 0, n = cols * rows; i < n; i++) img.data[i * 4 + 3] = (goingIn ? edge > key[i] : edge < key[i]) ? 255 : 0;
         c2.putImageData(img, 0, 0);
         if (f++ >= frames) { if (goingIn) wipeText.style.visibility = 'visible'; done(); } else setTimeout(draw, 45);
       })();
@@ -831,7 +836,7 @@
     roundEl.textContent = 'round ' + (round + 1) + '/' + LEVELS.length;
     newMelody();                                   // new bank, new pads, new pad positions
     setPads(true);
-    say(VERB + ' play');
+    say(MSG_PLAY);
   }
   function roundReady() { state = 'ready'; playBtn.disabled = false; }
   function enterRound() {
@@ -848,7 +853,7 @@
     gameRoot.classList.remove('mg-ingame');
     round = 0; mistakes = 0; showChances();
     layoutPads(idleCount()); labelPads(); showBank(); scatterPads();
-    setPads(true); say(VERB + ' to start');
+    setPads(true); say(MSG_START);
   }
   function idleAgain() { state = 'idle'; setGameRunning(false); }
   async function roundWon() {
@@ -1237,5 +1242,4 @@
   })();
 })();
 </script>
-
 </body>
