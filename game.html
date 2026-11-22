@@ -2,7 +2,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-
 <!-- 1-BIT VERSION, first pass: two tones, pixel-stepped shapes and motion, pixel font. The smooth version is memory-game-readymag.html.
      HOMEPAGE for a Readymag Code widget: paste all of this into the Widget code box.
      It is the whole page (name, game, popups), so dark mode covers everything.
@@ -317,8 +316,8 @@
   const BPM = 120;                  // default tempo (a bank can set its own with bpm)
   let tempo = BPM;                  // tempo in use: follows the current bank
   const MAX_MISTAKES = 3;           // game over on this many mistakes (lives carry across the rounds)
-  const WIPE_MS = 550;              // how long each wipe across the screen takes
-  const HOLD_MS = 1300;             // how long the screen stays covered, showing its text (round 2, you win!...)
+  const WIPE_MS = 450;              // how long each wipe across the screen takes
+  const HOLD_MS = 850;             // how long the screen stays covered, showing its text (round 2, you win!...)
   const JUDGE_RHYTHM = true;        // false = judge pitch order only
   const TIMING_PCT = 0.35;          // allowed timing error, as a share of the gap between notes
   const TIMING_MIN_MS = 50;         // but never tighter than this
@@ -417,14 +416,14 @@
   // ---- 1-bit look: block sizes and dither levels ----
   // Block sizes in px, one set for touch screens (phones, tablets) and one for desktop. Bigger = chunkier.
   const BLOCKS = {
-    touch:   { pad: 6, pill: 4, wipe: 8, dither: 2 },
-    desktop: { pad: 8, pill: 4, wipe: 6, dither: 2 },
+    touch:   { pad: 6, pill: 4, wipe: 4, dither: 2 },
+    desktop: { pad: 4, pill: 4, wipe: 2, dither: 2 },
   };   // pad: one cell of a pad's stepped circle (pad sizes snap to a multiple of it, and the pressed-pad shadow is one cell).  pill: the corner notch and shadow offset on pills.
        // wipe: one cell of the round-change dissolve.  dither: one dot of every dither pattern.
   const SHADOW_LEVEL = 8;       // dither coverage of the drop shadows, out of 16 (4x4 Bayer: 0 = nothing, 16 = solid)
   const DIM_LEVEL = 8;          // ...and of dimmed buttons
-  const RELEASE_LEVELS = [12, 8, 4];   // ...and the steps a released pad dithers back in through, out of 16
-  const DITHER_STEP_MS = 70;    // how long each of those steps lasts
+  const RELEASE_LEVELS = [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4];   // ...and the steps a released pad dithers back in through, out of 16
+  const DITHER_STEP_MS = 20;    // how long each of those steps lasts
   const B = tapScreen ? BLOCKS.touch : BLOCKS.desktop;
   const KEY_PX = 35;            // the keyboard reference's circles (desktop), in px
   const KEY_CELLS = 14;         // ...and how many cells across each is drawn: 14 at 35px is 2.5px a cell, crisp on a retina screen
@@ -1236,4 +1235,5 @@
   })();
 })();
 </script>
+
 </body>
