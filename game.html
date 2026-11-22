@@ -16,9 +16,11 @@
    Set your fonts and sizes here. The rest of the stylesheet reads from these.
    To use a custom font, load it first (an @font-face, or a <link>, above this <style>), then name it below.
    Sizes in em are relative to --mg-size-base. */
+
+@font-face { font-family: BNRiley; src: url("https://mattdonald.github.io/memory/BNRiley.otf") format("opentype"); }
 #memgame {
   --mg-font: system-ui, sans-serif;        /* the font for everything */
-  --mg-font-h1: var(--mg-font);            /* a different font just for the h1 (mattdonald) */
+  --mg-font-h1: BNRiley;            /* a different font just for the h1 (mattdonald) */
   --mg-size-base: 16px;                    /* base size: every em size below is relative to this */
   --mg-size-h1: clamp(1.5em, 7vw, 3em);    /* h1: mattdonald */
   --mg-size-h2: 1em;                       /* h2: always creating */
