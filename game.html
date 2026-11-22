@@ -421,7 +421,7 @@
   // ---- 1-bit look: block sizes and dither levels ----
   // Block sizes in px, one set for touch screens (phones, tablets) and one for desktop. Bigger = chunkier.
   const BLOCKS = {
-    touch:   { pad: 6, pill: 4, wipe: 4, dither: 2 },
+    touch:   { pad: 4, pill: 4, wipe: 2, dither: 2 },
     desktop: { pad: 4, pill: 4, wipe: 2, dither: 2 },
   };   // pad: one cell of a pad's stepped circle (pad sizes snap to a multiple of it, and the pressed-pad shadow is one cell).  pill: the corner notch and shadow offset on pills.
        // wipe: one cell of the round-change dissolve.  dither: one dot of every dither pattern.
