@@ -2,12 +2,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-<!-- HOMEPAGE for a Readymag Code widget: paste all of this into the Widget code box.
+<!-- 1-BIT VERSION, first pass: two tones, pixel-stepped shapes and motion, pixel font. The smooth version is memory-game-readymag.html.
+     HOMEPAGE for a Readymag Code widget: paste all of this into the Widget code box.
      It is the whole page (name, game, popups), so dark mode covers everything.
      EDIT: the about / how to play popup texts (bottom of the markup),
      and the sound banks (BANKS list in the script).
      FULLSCREEN (top of the script) = true: covers the whole screen, whatever size the widget is. Put the widget on its own page.
      Colours (set once, in the PALETTE block at the top of the stylesheet): light = orange background, off-white everything else, the inverse colour where a pad covers the name. Dark = off-black background, orange text and icons, pads as in light. Dark mode follows the device. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap">
 <style>
 /* ============================== TYPOGRAPHY ==============================
    Set your fonts and sizes here. The rest of the stylesheet reads from these.
@@ -159,6 +162,61 @@
 #memgame button.mg-icon[aria-disabled="true"] { pointer-events:none; }   /* cycle, once shake is on: dimmed and not tappable */
 #memgame #mg-metro { margin-left:calc(var(--mg-gap-point-metro) - var(--mg-icon-gap)); }
 #memgame #mg-midi { margin-left:calc(var(--mg-gap-metro-midi) - var(--mg-icon-gap)); }
+
+/* ============ 1-BIT LAYER: two tones only, hard pixel edges, stepped motion. Delete this whole block to get the smooth version back. ============ */
+#memgame {
+  --mg-font: 'Pixelify Sans', 'Courier New', ui-monospace, monospace;
+  --mg-px: 4px;                                          /* chunk size for the small things (pill corners); pads are drawn on a 20-cell grid by the script */
+  --mg-pad-fill: var(--mg-fg); --mg-pad-lit-fill: var(--mg-bg);   /* each theme is exactly two colours: light = off-white + orange, dark = orange + off-black */
+  --mg-pad-opacity: 1; --mg-pad-lit-filter: none;
+  --mg-dither: repeating-conic-gradient(#000 0% 25%, transparent 0% 50%) 0 0 / 4px 4px;   /* 'dimmed' becomes a checker dither, not a third tone */
+  font-family: var(--mg-font); -webkit-font-smoothing: none; font-smooth: never; text-rendering: optimizeSpeed;
+}
+#memgame svg { shape-rendering: crispEdges; }
+#memgame .mg-pad { border-radius: 0; clip-path: var(--mg-pad-clip); }                        /* stepped circle, set by the script */
+#mg-play .mg-reel { clip-path: var(--mg-pad-clip); }
+/* Lit: the whole pad flips to the background colour and drops one cell onto its shadow, like a pressed button.
+   Released: it dithers back in through three levels. */
+#memgame .mg-pad::before { content: ''; position: absolute; inset: 0; clip-path: var(--mg-pad-clip); background: var(--mg-pad-lit-fill); visibility: hidden; pointer-events: none; }
+#memgame .mg-pad::after { position: relative; z-index: 1; }
+#memgame .mg-pad.mg-lit::before { visibility: visible; }
+#memgame .mg-pad.mg-d3::before { visibility: visible; -webkit-mask: var(--mg-d3) 0 0 / 8px 8px; mask: var(--mg-d3) 0 0 / 8px 8px; }
+#memgame .mg-pad.mg-d2::before { visibility: visible; -webkit-mask: var(--mg-d2) 0 0 / 8px 8px; mask: var(--mg-d2) 0 0 / 8px 8px; }
+#memgame .mg-pad.mg-d1::before { visibility: visible; -webkit-mask: var(--mg-d1) 0 0 / 8px 8px; mask: var(--mg-d1) 0 0 / 8px 8px; }
+#memgame .mg-pad.mg-d3, #memgame .mg-pad.mg-d2 { color: var(--mg-pad-fill); }
+#memgame .mg-pad.mg-lit, #memgame .mg-pad.mg-d3 { translate: calc(var(--size, 96px) / var(--mg-cells, 20)) calc(var(--size, 96px) / var(--mg-cells, 20)); }
+/* drop shadow: the same stepped circle, one cell down and right, half-dithered. It copies its pad's spot and drift (the script keeps them in step). */
+#memgame .mg-shadow { position: absolute; width: var(--size, 96px); height: var(--size, 96px); background: var(--mg-fg); clip-path: var(--mg-pad-clip); pointer-events: none;
+  -webkit-mask: var(--mg-d2) 0 0 / 8px 8px; mask: var(--mg-d2) 0 0 / 8px 8px;
+  translate: calc(var(--size, 96px) / var(--mg-cells, 20)) calc(var(--size, 96px) / var(--mg-cells, 20));
+  transition: left .8s steps(10), top .8s steps(10); will-change: transform; animation: mg-drift var(--dur, 9s) steps(1, end) infinite; }
+#mg-play { isolation: isolate; }
+#mg-play::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--mg-fg); clip-path: var(--mg-pad-clip); pointer-events: none;
+  -webkit-mask: var(--mg-d2) 0 0 / 8px 8px; mask: var(--mg-d2) 0 0 / 8px 8px;
+  translate: calc(var(--size, 96px) / var(--mg-cells, 20)) calc(var(--size, 96px) / var(--mg-cells, 20)); }
+#memgame .mg-pad { transition: left .8s steps(10), top .8s steps(10); animation-timing-function: steps(1, end); }   /* hops between whole-pixel spots, no smooth fade */
+#mg-playgroup { transition: left .8s steps(10), top .8s steps(10); animation-timing-function: steps(1, end); }
+#mg-play .mg-reel { fill: var(--mg-fg); animation-timing-function: steps(12); }
+#memgame { --mg-notch: polygon(0 var(--mg-px), var(--mg-px) var(--mg-px), var(--mg-px) 0, calc(100% - var(--mg-px)) 0, calc(100% - var(--mg-px)) var(--mg-px), 100% var(--mg-px), 100% calc(100% - var(--mg-px)), calc(100% - var(--mg-px)) calc(100% - var(--mg-px)), calc(100% - var(--mg-px)) 100%, var(--mg-px) 100%, var(--mg-px) calc(100% - var(--mg-px)), 0 calc(100% - var(--mg-px))); }
+/* pills: a notched rectangle (two bars, so nothing clips the shadow) with a half-dithered shadow one chunk down and right */
+#memgame .mg-link, #mg-playgroup p { border-radius: 0; clip-path: none; position: relative; isolation: isolate;
+  background: linear-gradient(var(--mg-fg), var(--mg-fg)) 0 var(--mg-px) / 100% calc(100% - 2 * var(--mg-px)) no-repeat,
+              linear-gradient(var(--mg-fg), var(--mg-fg)) var(--mg-px) 0 / calc(100% - 2 * var(--mg-px)) 100% no-repeat; }
+#memgame .mg-link::before, #mg-playgroup p::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--mg-fg); clip-path: var(--mg-notch); pointer-events: none;
+  translate: var(--mg-px) var(--mg-px); -webkit-mask: var(--mg-d2) 0 0 / 8px 8px; mask: var(--mg-d2) 0 0 / 8px 8px; }
+#mg-wipe { background: transparent; color: var(--mg-fg); }   /* the overlay is drawn by the script, as dithered cells */
+#mg-wipe-canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; }
+#mg-wipe-text { position: relative; }
+#mg-keys { --mg-key-size: 24px; --mg-key-dim: 1; }
+#mg-keys .mg-key { border-radius: 0; clip-path: var(--mg-key-clip); }
+#mg-keys .mg-white { background: var(--mg-fg); color: var(--mg-bg); }
+#mg-keys .mg-black { background: var(--mg-bg); border: 2px solid var(--mg-fg); color: var(--mg-fg); }
+#memgame button.mg-icon { transition: none; }
+#memgame button.mg-icon[aria-pressed="false"], #memgame button.mg-icon:disabled, #memgame button.mg-icon[aria-disabled="true"], #mg-keys .mg-key.mg-key-off { opacity: 1; -webkit-mask: var(--mg-dither); mask: var(--mg-dither); }
+#mg-chances .mg-chance { transition: none; }
+#memgame dialog { border-radius: 0; transition: transform .3s steps(6); }
+#memgame .mg-grab::before { border-radius: 0; }
+/* ================================================================================================================================== */
 </style>
 <div id="memgame">
 <div id="mg-top">
@@ -257,13 +315,14 @@
   const BPM = 120;                  // default tempo (a bank can set its own with bpm)
   let tempo = BPM;                  // tempo in use: follows the current bank
   const MAX_MISTAKES = 3;           // game over on this many mistakes (lives carry across the rounds)
+  const WIPE_CELL = 8;              // the wipe is a dithered dissolve on a grid of this many px per cell
   const WIPE_MS = 550;              // how long each wipe across the screen takes
   const HOLD_MS = 1300;             // how long the screen stays covered, showing its text (round 2, you win!...)
   const JUDGE_RHYTHM = true;        // false = judge pitch order only
   const TIMING_PCT = 0.35;          // allowed timing error, as a share of the gap between notes
   const TIMING_MIN_MS = 50;         // but never tighter than this
   const RETRY_GAP_BEATS = 1.5;      // after a mistake, presses are ignored until the player has been quiet this long (in beats), so a pattern carried on after a slip can't restart itself by accident
-  const DEBUG = false;               // true = log every press and the pattern, to the console and a panel on screen. Set false before publishing.
+  const DEBUG = false;              // true = log every press and the pattern, to the console and a panel on screen
   const END_FADE_MS = 15;            // quick fade-out over the end of every sample, so it never stops on a click (0 = off)
   const SHAKE_THRESHOLD = 28;       // phone shake to change sounds: how hard a shake must be (lower = more sensitive; walking is well under 15)
   const SHAKE_COOLDOWN_MS = 900;    // ...and the least time between two shakes
@@ -354,6 +413,26 @@
   const midiBtn = document.getElementById('mg-midi');
   const padsEl = document.getElementById('mg-pads');
 
+  // ---- 1-bit shapes: a circle drawn on a CELLS x CELLS pixel grid, as a clip-path (pads, play, keys) and a mask (the name's reveal) ----
+  const CELLS = 20;             // fewer = chunkier. Pad sizes snap to a multiple of this, so every cell is a whole number of pixels.
+  function stepCircle(n) {
+    const rows = [];
+    for (let y = 0; y < n; y++) { const dy = y + .5 - n / 2, h = Math.sqrt(Math.max(0, n * n / 4 - dy * dy)); rows.push([Math.round(n / 2 - h), Math.round(n / 2 + h), y]); }
+    const pc = v => (v / n * 100).toFixed(3) + '%', pts = [];
+    rows.forEach(([x0, , y]) => pts.push(pc(x0) + ' ' + pc(y), pc(x0) + ' ' + pc(y + 1)));
+    rows.slice().reverse().forEach(([, x1, y]) => pts.push(pc(x1) + ' ' + pc(y + 1), pc(x1) + ' ' + pc(y)));
+    const path = rows.map(([x0, x1, y]) => 'M' + x0 + ' ' + y + 'h' + (x1 - x0) + 'v1h-' + (x1 - x0) + 'z').join('');
+    return { poly: 'polygon(' + pts.join(',') + ')', mask: 'url("data:image/svg+xml,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 " + n + ' ' + n + "' shape-rendering='crispEdges'><path d='" + path + "'/></svg>") + '")' };
+  }
+  const padShape = stepCircle(CELLS), keyShape = stepCircle(12);
+  gameRoot.style.setProperty('--mg-pad-clip', padShape.poly); gameRoot.style.setProperty('--mg-key-clip', keyShape.poly);
+  const snap = v => Math.max(CELLS, Math.floor(v / CELLS) * CELLS);
+  const DITHER_STEP_MS = 70;    // a released pad steps back to rest through 3 dither levels (75%, 50%, 25%), this long each
+  const bayer = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];   // ordered-dither matrix: a pixel is on if its number is under the coverage
+  const dither = cover => { let d = ''; bayer.forEach((row, y) => row.forEach((v, x) => { if (v < cover * 16) d += 'M' + x + ' ' + y + 'h1v1h-1z'; })); return 'url("data:image/svg+xml,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4' shape-rendering='crispEdges'><path d='" + d + "'/></svg>") + '")'; };
+  [['d3', .75], ['d2', .5], ['d1', .25]].forEach(([n, c]) => gameRoot.style.setProperty('--mg-' + n, dither(c)));
+  gameRoot.style.setProperty('--mg-cells', CELLS);
+
   // ---- debug: what was pressed vs what the pattern wants ----
   const mgLog = [];
   const dbgEl = DEBUG ? Object.assign(document.createElement('div'), { id: 'mg-debug' }) : null;
@@ -383,6 +462,7 @@
     const b = document.createElement('button');
     b.className = 'mg-pad';
     b.addEventListener('pointerdown', () => onPad(i, 'tap'));
+    const sh = document.createElement('i'); sh.className = 'mg-shadow'; padsEl.appendChild(sh); b._shadow = sh;   // a dithered drop shadow under each pad
     padsEl.appendChild(b);
     return b;
   });
@@ -436,13 +516,16 @@
     src.start(t);               // plays in full, never cut off
   }
 
-  function flash(i, ms = 250, snap = false) {   // snap: a quick fade back, so the same pad twice in a row reads as two hits, not one long one
+  function flash(i, ms = 250) {
     const p = pads[i];
     clearTimeout(p._ft);
-    if (snap) p.style.setProperty('--mg-fade', '.06s'); else p.style.removeProperty('--mg-fade');
+    p.classList.remove('mg-d3', 'mg-d2', 'mg-d1');
     p.classList.add('mg-lit');
-    p._fadeEnd = performance.now() + ms + fadeMs + 100;   // after this the pad is back at rest: the reveal can skip it
-    p._ft = setTimeout(() => p.classList.remove('mg-lit'), ms);
+    p._ft = setTimeout(() => {    // released: step back to rest through three dither levels
+      p.classList.remove('mg-lit');
+      const levels = ['mg-d3', 'mg-d2', 'mg-d1']; let k = 0;
+      (function step() { levels.forEach(c => p.classList.remove(c)); if (k < levels.length) { p.classList.add(levels[k++]); p._ft = setTimeout(step, DITHER_STEP_MS); } })();
+    }, ms);
   }
 
   // ---- midi export: the last pattern played, as a one-bar .mid file ----
@@ -596,26 +679,32 @@
     let size = padSizes[sizeKey], spots = null;
     if (size) for (let a = 0; a < 40 && !spots; a++) spots = place(size, false);   // a size we already use: try hard before ever shrinking
     if (!spots) {                                                                   // otherwise: the biggest size that fits reliably (5 shuffles in a row)
-      const start = size || Math.max(60, Math.min(MAX_PAD, Math.min(W, H) * PAD_FRAC));
-      for (let sz = start; sz > 30 && !spots; sz -= 3) {
+      const start = size || snap(Math.max(60, Math.min(MAX_PAD, Math.min(W, H) * PAD_FRAC)));
+      for (let sz = start; sz > CELLS && !spots; sz -= CELLS) {
         let last = null, allOk = true;
         for (let a = 0; a < 5 && allOk; a++) { last = place(sz, false); allOk = !!last; }
         if (allOk) { spots = last; size = sz; }
       }
-      if (!spots) { size = 30; spots = place(30, true); }
+      if (!spots) { size = CELLS * 2; spots = place(size, true); }
     }
     padSizes[sizeKey] = size;
-    groupEl.style.left = spots.g.x + 'px'; groupEl.style.top = spots.g.y + 'px';
+    groupEl.style.left = Math.round(spots.g.x) + 'px'; groupEl.style.top = Math.round(spots.g.y) + 'px';
     setDrift(groupEl);
     pads.forEach((p, i) => {
       p.style.setProperty('--size', size + 'px');
-      p.style.left = spots.pts[i].x + 'px'; p.style.top = spots.pts[i].y + 'px';
-      setDrift(p);
+      p.style.left = Math.round(spots.pts[i].x) + 'px'; p.style.top = Math.round(spots.pts[i].y) + 'px';
+      setDrift(p); syncShadow(p);
     });
   }
 
+  function syncShadow(p) {    // the shadow copies the pad's spot and drift, so the two move as one
+    const sh = p._shadow; if (!sh) return;
+    ['left', 'top', '--size', '--dx1', '--dy1', '--dx2', '--dy2', '--dur'].forEach(k => sh.style.setProperty(k, p.style.getPropertyValue(k)));
+    sh.style.animationDelay = p.style.animationDelay;
+  }
+
   function setDrift(el) {     // slow wiggle around its spot, own speed and phase
-    const spot = () => { const a = Math.random() * 2 * Math.PI, d = Math.sqrt(Math.random()) * WIGGLE_PX; return [Math.cos(a) * d + 'px', Math.sin(a) * d + 'px']; };   // inside a circle: never more than WIGGLE_PX away, in any direction
+    const spot = () => { const a = Math.random() * 2 * Math.PI, d = Math.sqrt(Math.random()) * WIGGLE_PX; return [Math.round(Math.cos(a) * d) + 'px', Math.round(Math.sin(a) * d) + 'px']; };   // inside a circle: never more than WIGGLE_PX away, in any direction
     const [x1, y1] = spot(), [x2, y2] = spot();
     el.style.setProperty('--dx1', x1); el.style.setProperty('--dy1', y1);
     el.style.setProperty('--dx2', x2); el.style.setProperty('--dy2', y2);
@@ -623,7 +712,7 @@
     el.style.animationDelay = (-Math.random() * 10) + 's';
   }
 
-  function layoutPads(count) { pads.forEach((p, i) => p.style.display = i < count ? '' : 'none'); updateKeyboard(); }
+  function layoutPads(count) { pads.forEach((p, i) => { p.style.display = i < count ? '' : 'none'; p._shadow.style.display = p.style.display; }); updateKeyboard(); }
   function idleCount() {      // pads shown outside a game
     if (currentBank === null) return 4;
     const b = BANKS[currentBank];
@@ -674,11 +763,30 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  function sweep(from, to) {                       // the overlay sweeps across, left to right
-    const ms = calm ? 1 : WIPE_MS;
-    if (!wipeEl.animate) return sleep(ms);
-    return wipeEl.animate([{ transform: 'translateX(' + from + ')' }, { transform: 'translateX(' + to + ')' }],
-                          { duration: ms, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'forwards' }).finished.catch(() => {});
+  const wipeCanvas = document.createElement('canvas'); wipeCanvas.id = 'mg-wipe-canvas'; wipeEl.insertBefore(wipeCanvas, wipeText);
+  function sweep(from, to) {                       // a dithered dissolve, left to right, drawn in coarse steps on a grid of WIPE_CELL px
+    const goingIn = to === '0%', ms = calm ? 1 : WIPE_MS;
+    wipeText.style.visibility = 'hidden';          // the text only shows once the screen is fully covered
+    const c2 = wipeCanvas.getContext && wipeCanvas.getContext('2d');
+    if (!c2) return sleep(ms).then(() => { if (goingIn) wipeText.style.visibility = 'visible'; });
+    const cols = Math.ceil(wipeEl.clientWidth / WIPE_CELL), rows = Math.ceil(wipeEl.clientHeight / WIPE_CELL);
+    wipeCanvas.width = cols; wipeCanvas.height = rows;
+    const rgb = (/(\d+)\D+(\d+)\D+(\d+)/.exec(getComputedStyle(wipeEl).color) || [0, 0, 0, 0]).slice(1, 4).map(Number);
+    const img = c2.createImageData(cols, rows), frames = calm ? 1 : Math.max(2, Math.round(ms / 45)), R = 0.6;   // R = how soft the dithered edge is
+    return new Promise(done => {
+      let f = 0;
+      (function draw() {
+        const t = Math.min(1, f / frames);
+        for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+          const xn = (x / cols) * 0.85 + (y / rows) * 0.15;                       // mostly left to right, a little top to bottom
+          let v = Math.min(1, Math.max(0, (t * (1 + R) - xn) / R)); if (!goingIn) v = 1 - v;
+          const i = (y * cols + x) * 4;
+          img.data[i] = rgb[0]; img.data[i + 1] = rgb[1]; img.data[i + 2] = rgb[2]; img.data[i + 3] = v > (bayer[y & 3][x & 3] + 0.5) / 16 ? 255 : 0;
+        }
+        c2.putImageData(img, 0, 0);
+        if (f++ >= frames) { if (goingIn) wipeText.style.visibility = 'visible'; done(); } else setTimeout(draw, 45);
+      })();
+    });
   }
   async function transition(text, whileCovered, afterwards) {
     state = 'transition';
@@ -925,26 +1033,22 @@
   function enableShake() {
     shake = 'on'; setShakeLock(true);
     window.addEventListener('devicemotion', onMotion, { signal });
-    say('shake to change sounds', VERB + ' to start');
     setTimeout(() => {          // no motion events arrived: the browser or the page's frame isn't allowing them
       if (gotMotion) return;
-      shake = 'failed'; setShakeLock(false); window.removeEventListener('devicemotion', onMotion);
-      say('no shake here: tap to cycle', VERB + ' to start');
+      shake = 'failed'; setShakeLock(false); window.removeEventListener('devicemotion', onMotion);   // the button works as a plain cycle again
     }, 2500);
   }
   function askForShake() {      // must run straight from the tap: iOS only shows its prompt from a user gesture
     shake = 'pending';
     if (typeof DeviceMotionEvent.requestPermission !== 'function') return enableShake();
-    say('allow motion access');
     DeviceMotionEvent.requestPermission().then(r => {
       dbg('motion permission', r);
-      if (r === 'granted') enableShake(); else { shake = 'failed'; say('shake is off: tap to cycle', VERB + ' to start'); }
-    }).catch(() => { shake = 'failed'; say('no shake here: tap to cycle', VERB + ' to start'); });
+      if (r === 'granted') enableShake(); else { shake = 'failed'; cycleSounds(); }   // declined: the button cycles, starting with this tap
+    }).catch(() => { shake = 'failed'; cycleSounds(); });
   }
   cycleBtn.addEventListener('click', () => {
     if (!canShake || shake === 'failed') return cycleSounds();   // desktop, or shake isn't available: the button changes the bank
     if (shake === 'unasked') askForShake();                      // first tap: ask, no bank change
-    else if (shake === 'on') say('shake to change sounds', VERB + ' to start');
   });
   playBtn.addEventListener('click', () => {
     if (state === 'input') playMelody(true);                 // your turn: hear the pattern again
@@ -1062,18 +1166,7 @@
   const makeReveal = id => { const c = nameEl.cloneNode(true); c.id = id; c.setAttribute('aria-hidden', 'true'); nameEl.parentNode.insertBefore(c, beforeBottom); return c; };
   const rev = makeReveal('mg-name-rev'), rev2 = makeReveal('mg-name-rev2');
   const rootEl = document.getElementById('memgame');
-  const probe = document.createElement('i'); probe.hidden = true; rootEl.appendChild(probe);
-  const greenOf = colour => { probe.style.backgroundColor = colour; const m = /rgba?\(\d+,\s*(\d+)/.exec(getComputedStyle(probe).backgroundColor); return m ? +m[1] : 0; };   // green channel of any css colour
-  const gRest = greenOf('var(--mg-pad-fill)'), gLit = greenOf('var(--mg-pad-lit-fill)');   // read from the css, so colours are declared once
-  const fadeRaw = getComputedStyle(rootEl).getPropertyValue('--mg-fade').trim();   // the pad fade length (default .5s), read once
-  const fadeMs = fadeRaw ? (/ms$/.test(fadeRaw) ? parseFloat(fadeRaw) : parseFloat(fadeRaw) * 1000) || 500 : 500;
-  function litness(p) {                    // 0 = resting colour (off-white), 1 = fully lit (orange); follows the fade back
-    if (p === playBtn) return 0;
-    if (!p.classList.contains('mg-lit') && performance.now() > (p._fadeEnd || 0)) return 0;   // at rest: no style lookup needed
-    const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(getComputedStyle(p).backgroundColor || '');
-    if (m && gRest !== gLit) return Math.min(1, Math.max(0, (gRest - +m[2]) / (gRest - gLit)));
-    return p.classList.contains('mg-lit') ? 1 : 0;
-  }
+  function litness(p) { return p.classList.contains('mg-lit') ? 1 : p.classList.contains('mg-d3') ? 0.75 : p.classList.contains('mg-d2') ? 0.5 : 0; }   // the play circle never lights
   (function updateReveal() {
     if (!alive || !rev.isConnected) return;
     if (gameRoot.classList.contains('mg-ingame')) return requestAnimationFrame(updateReveal);   // the name is hidden during a game: nothing to mask
@@ -1082,16 +1175,14 @@
     const resting = [], lit = [];
     pads.concat(playBtn).forEach(p => {   // the play circle is a pad too
       if (p.style.display === 'none') return;
-      const r = p.getBoundingClientRect(), rad = r.width / 2 * k;
-      const cx = (r.left - nr.left) * k + rad, cy = (r.top - nr.top) * k + rad, a = litness(p);
-      const circle = alpha => 'radial-gradient(circle at ' + cx + 'px ' + cy + 'px, rgba(0,0,0,' + alpha.toFixed(3) + ') ' + (rad - 0.5) + 'px, transparent ' + (rad + 0.5) + 'px)';
-      if (a < 0.999) resting.push(circle(1 - a));
-      if (a > 0.001) lit.push(circle(a));
+      const r = p.getBoundingClientRect();
+      const d = Math.round(r.width * k), x = Math.round((r.left - nr.left) * k), y = Math.round((r.top - nr.top) * k);
+      (litness(p) >= 0.5 ? lit : resting).push(padShape.mask + ' ' + x + 'px ' + y + 'px / ' + d + 'px ' + d + 'px no-repeat');   // 1-bit: lit or not, no in-between
     });
     const none = 'linear-gradient(transparent, transparent)';   // 'none' would show the whole word
     const m1 = resting.join(',') || none, m2 = lit.join(',') || none;
-    if (m1 !== lastMask) { lastMask = m1; rev.style.webkitMaskImage = m1; rev.style.maskImage = m1; }
-    if (m2 !== lastMask2) { lastMask2 = m2; rev2.style.webkitMaskImage = m2; rev2.style.maskImage = m2; }
+    if (m1 !== lastMask) { lastMask = m1; rev.style.webkitMask = m1; rev.style.mask = m1; }
+    if (m2 !== lastMask2) { lastMask2 = m2; rev2.style.webkitMask = m2; rev2.style.mask = m2; }
     requestAnimationFrame(updateReveal);
   })();
 
@@ -1119,5 +1210,4 @@
     }
   })();
 })();
-</script>
-</body>
+</script></body>
