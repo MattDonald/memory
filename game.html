@@ -218,6 +218,26 @@
 #memgame button.mg-icon { transition: none; }
 #memgame button.mg-icon[aria-pressed="false"], #memgame button.mg-icon:disabled, #memgame button.mg-icon[aria-disabled="true"], #mg-keys .mg-key.mg-key-off { opacity: 1; -webkit-mask: var(--mg-dim-dither) 0 0 / var(--mg-tile) var(--mg-tile); mask: var(--mg-dim-dither) 0 0 / var(--mg-tile) var(--mg-tile); }
 #mg-chances .mg-chance { transition: none; }
+/* ---- loading animation (the script adds the classes and the element) ---- */
+#memgame { isolation: isolate; }
+#mg-intro-bg { display: none; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--mg-bg);
+  --mg-intro-tile: calc(4 * var(--mg-ipx, 4px)); -webkit-mask: var(--mg-intro-dither) 0 0 / var(--mg-intro-tile) var(--mg-intro-tile); mask: var(--mg-intro-dither) 0 0 / var(--mg-intro-tile) var(--mg-intro-tile); }
+#memgame.mg-intro #mg-intro-bg { display: block; }
+#memgame.mg-intro { background: var(--mg-fg); }                                              /* starts off-white; the orange dithers in over it */
+#memgame.mg-preload { pointer-events: none; }
+#memgame.mg-intro #mg-name .mg-name-text { color: var(--mg-bg); }                              /* an orange name on the off-white start */
+#memgame.mg-intro.mg-i2 #mg-name .mg-name-text { color: var(--mg-fg); }                        /* ...flips once there is more orange than off-white */
+#memgame.mg-intro:not(.mg-i2) .mg-tag { visibility: hidden; }                                  /* the tagline arrives with the flip */
+#memgame.mg-intro :is(#mg-pads, #mg-playgroup, #mg-name-rev, #mg-name-rev2) { visibility: hidden; }   /* the pads wait for the dither to finish, then slide in */
+#memgame.mg-preload :is(#mg-nav .mg-link, #mg-bankbar, #mg-keys .mg-key):not(.mg-in) { visibility: hidden; }
+@keyframes mg-bounce { 0% { transform: translateY(-3em); } 28% { transform: translateY(0); } 48% { transform: translateY(-1em); } 66% { transform: translateY(0); } 80% { transform: translateY(-.35em); } 92%, 100% { transform: translateY(0); } }
+.mg-bouncing { animation: mg-bounce .7s steps(5, end) both; }                                  /* a stepped bounce: it drops in and settles in hops */
+/* ---- the count-in: a huge numeral on top of everything in the game, but under the wipe (the script adds the element) ---- */
+#memgame { --mg-count-size: 100vh; }
+.mg-countwrap { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; overflow: hidden; z-index: 10; pointer-events: none;   /* above the pads, shadows and game bar; below the wipe (20) */ user-select: none; -webkit-user-select: none;
+  font-family: var(--mg-font); font-weight: 800; font-size: var(--mg-count-size); line-height: 1; color: var(--mg-fg);
+  -webkit-mask: var(--mg-count-dither) 0 0 / var(--mg-tile) var(--mg-tile); mask: var(--mg-count-dither) 0 0 / var(--mg-tile) var(--mg-tile); }   /* drawn as a Bayer dither, so it reads as a texture where it crosses pads */
+.mg-countwrap.mg-on { display: flex; }
 /* ---- the game bar: lives left, round in the middle, icons right, along the bottom, a little in from the sides ---- */
 #mg-bottom { display: none; }
 #memgame.mg-ingame #mg-bottom { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; position: absolute; z-index: 5; left: 50%; transform: translateX(-50%);
@@ -428,14 +448,21 @@
   // ---- 1-bit look: block sizes and dither levels ----
   // Block sizes in px, one set for touch screens (phones, tablets) and one for desktop. Bigger = chunkier.
   const BLOCKS = {
-    touch:   { pad: 6, pill: 4, wipe: 4, dither: 2 },
-    desktop: { pad: 4, pill: 4, wipe: 2, dither: 2 },
+    touch:   { pad: 6, pill: 4, wipe: 4, dither: 2, intro: 4 },
+    desktop: { pad: 4, pill: 4, wipe: 2, dither: 2, intro: 4 },
   };   // pad: one cell of a pad's stepped circle (pad sizes snap to a multiple of it, and the pressed-pad shadow is one cell).  pill: the corner notch and shadow offset on pills.
-       // wipe: one cell of the round-change dissolve.  dither: one dot of every dither pattern.
+       // wipe: one cell of the round-change dissolve.  dither: one dot of every dither pattern.  intro: one dot of the loading dither.
   const SHADOW_LEVEL = 8;       // dither coverage of the drop shadows, out of 16 (4x4 Bayer: 0 = nothing, 16 = solid)
   const DIM_LEVEL = 8;          // ...and of dimmed buttons
+  const COUNT_LEVEL = 8;        // ...and of the big count-in numeral (16 = solid)
   const RELEASE_LEVELS = [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4];   // ...and the steps a released pad dithers back in through, out of 16
   const DITHER_STEP_MS = 20;    // how long each of those steps lasts
+  const INTRO_STEP_MS = 70;     // loading animation: how long each of its 16 dither steps lasts
+  const INTRO_PAD_GAP_MS = 140; // ...the delay between one pad starting to slide in (alternately from the left and the right) and the next
+  const INTRO_SLIDE_MS = 800;   // ...how long a pad's slide and bounce lasts
+  const INTRO_GAP_MS = 160;     // ...the delay between one nav button / the bank starting to bounce in and the next
+  const INTRO_KEY_GAP_MS = 70;  // ...and between one keyboard key and the next
+  const INTRO_BOUNCE_MS = 700;  // ...how long a nav / bank / key bounce lasts (keep in step with .mg-bouncing in the css)
   const B = tapScreen ? BLOCKS.touch : BLOCKS.desktop;
   const KEY_PX = 35;            // the keyboard reference's circles (desktop), in px
   const KEY_CELLS = 14;         // ...and how many cells across each is drawn: 14 at 35px is 2.5px a cell, crisp on a retina screen
@@ -461,8 +488,54 @@
   const bayer = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];   // ordered-dither matrix: a pixel is on if its number is under the coverage
   const bayerMask = k => { let d = ''; bayer.forEach((row, y) => row.forEach((v, x) => { if (v < k) d += 'M' + x + ' ' + y + 'h1v1h-1z'; })); return 'url("data:image/svg+xml,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4' shape-rendering='crispEdges'><path d='" + d + "'/></svg>") + '")'; };   // a 4x4 tile with k of its 16 dots on
   const releaseMasks = RELEASE_LEVELS.map(bayerMask);
-  gameRoot.style.setProperty('--mg-shadow-dither', bayerMask(SHADOW_LEVEL)); gameRoot.style.setProperty('--mg-dim-dither', bayerMask(DIM_LEVEL));
+  gameRoot.style.setProperty('--mg-shadow-dither', bayerMask(SHADOW_LEVEL)); gameRoot.style.setProperty('--mg-dim-dither', bayerMask(DIM_LEVEL)); gameRoot.style.setProperty('--mg-count-dither', bayerMask(COUNT_LEVEL));
   gameRoot.style.setProperty('--mg-dpx', B.dither + 'px'); gameRoot.style.setProperty('--mg-px', B.pill + 'px');
+
+  // ---- loading animation ----
+  // The page starts off-white with the name in orange. Orange dithers in over 16 Bayer steps. Once there is more orange than off-white (step 9) the name flips to off-white
+  // and the tagline appears. Then the pads slide in one by one from the left and right, each nav button and the bank bounce in, and last the keyboard, one key at a time. Skipped for reduced motion.
+  if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+    const introEl = document.createElement('div'); introEl.id = 'mg-intro-bg'; gameRoot.insertBefore(introEl, gameRoot.firstChild);
+    const introMasks = Array.from({ length: 17 }, (_, k) => bayerMask(k));
+    const introSet = k => gameRoot.style.setProperty('--mg-intro-dither', introMasks[k]);
+    gameRoot.style.setProperty('--mg-ipx', B.intro + 'px');
+    gameRoot.classList.add('mg-intro', 'mg-preload'); introSet(0);
+    setTimeout(() => gameRoot.classList.remove('mg-intro', 'mg-i2', 'mg-preload'), 8000);   // failsafe: the page is never left hidden
+    Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 1500))]).then(() => {
+      let k = 0;
+      (function step() {
+        k++; introSet(k);
+        if (k === 9) gameRoot.classList.add('mg-i2');                 // more orange than off-white: flip the name, reveal the rest
+        if (k < 16) { setTimeout(step, INTRO_STEP_MS); return; }
+        setTimeout(() => {                                             // fully orange: back to the normal background, then the pads, nav, bank and keys come in
+          gameRoot.classList.remove('mg-intro', 'mg-i2');
+          const slideIn = (el, side, delay) => {                       // slides in from off-screen on one side, then rebounds back and forth as it settles
+            if (!el.animate) return;
+            const r = el.getBoundingClientRect(), W = gameRoot.getBoundingClientRect(), dir = side === 'left' ? -1 : 1;
+            const dist = dir < 0 ? -(r.right - W.left + 24) : (W.right - r.left + 24);
+            const shadow = el.classList.contains('mg-shadow'), off = 'calc(var(--size, 96px) / var(--mg-cells, 20))';   // a shadow keeps its one-cell offset from its pad
+            const at = [[0, dist], [.45, 0], [.6, dir * 28], [.75, 0], [.88, dir * 10], [1, 0]];
+            el.animate(at.map(([offset, x]) => ({ offset, translate: shadow ? 'calc(' + x + 'px + ' + off + ') ' + off : x + 'px 0', easing: 'steps(5, end)' })), { duration: INTRO_SLIDE_MS, delay, fill: 'backwards' });
+          };
+          const stages = [];
+          const items = pads.filter(p => p.style.display !== 'none').map(p => [p, p._shadow]).concat([[document.getElementById('mg-playgroup')]]);
+          items.forEach((group, i) => group.forEach(el => slideIn(el, i % 2 ? 'right' : 'left', i * INTRO_PAD_GAP_MS)));
+          let t = (items.length - 1) * INTRO_PAD_GAP_MS + INTRO_SLIDE_MS * 0.6;       // the next stage starts while the last pad is still settling
+          const nextUp = Array.from(gameRoot.querySelectorAll('#mg-nav .mg-link')).concat(document.getElementById('mg-bankbar'));
+          nextUp.forEach((el, i) => stages.push([el, t + i * INTRO_GAP_MS]));
+          t += nextUp.length * INTRO_GAP_MS + INTRO_BOUNCE_MS * 0.4;
+          const keysEl = document.getElementById('mg-keys');
+          if (keysEl && getComputedStyle(keysEl).display !== 'none') {
+            Array.from(keysEl.querySelectorAll('.mg-key')).sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left)
+              .forEach((el, i) => stages.push([el, t + i * INTRO_KEY_GAP_MS]));
+          }
+          let end = 0;
+          stages.forEach(([el, at]) => { end = Math.max(end, at + INTRO_BOUNCE_MS); setTimeout(() => el.classList.add('mg-in', 'mg-bouncing'), at); });
+          setTimeout(() => { stages.forEach(([el]) => el.classList.remove('mg-in', 'mg-bouncing')); gameRoot.classList.remove('mg-preload'); }, Math.max(end, t + INTRO_SLIDE_MS));
+        }, INTRO_STEP_MS);
+      })();
+    });
+  }
 
   // ---- debug: what was pressed vs what the pattern wants ----
   const mgLog = [];
@@ -640,7 +713,7 @@
 
   const ac = new AbortController(), signal = ac.signal;   // lets destroy() remove the document-level listeners
   document.addEventListener('keydown', e => {
-    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || !stageEl.isConnected || state === 'transition' || document.querySelector('#memgame dialog[open]')) return;
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || !stageEl.isConnected || state === 'transition' || gameRoot.classList.contains('mg-preload') || document.querySelector('#memgame dialog[open]')) return;
     const t = e.target;   // leave typing elsewhere on the page alone
     if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
     if (e.code === 'Space' || e.key === ' ') {   // the space bar presses play
@@ -862,7 +935,8 @@
     layoutPads(idleCount()); labelPads(); showBank(); scatterPads();
     setPads(true); say(MSG_START);
   }
-  function idleAgain() { state = 'idle'; setGameRunning(false); }
+  function idleAgain() {
+    setCount(0); state = 'idle'; setGameRunning(false); }
   async function roundWon() {
     leaveRound();
     await sleep(450);                              // let the last note land
@@ -945,7 +1019,7 @@
     dbg('  beats:', rhythm.join(' '));
     pos = 0; holdUntil = 0; if (!replay) armed = true; state = 'playback';
     setGameRunning(true); setPads(false); playBtn.classList.add('mg-spinning');   // the reel turns while the pattern plays
-    if (replay && metroRunning) say('wait');   // tapped mid-bar: wait for the next beat 1
+    say('listen…');   // the whole way through, count-in included: the count itself is drawn huge behind the pads
     ensureBank(currentBank).then(() => {
       const beatMs = 60000 / tempo, c = getCtx();
       const bufs = bankBuffers[currentBank] || [];
@@ -953,9 +1027,9 @@
       // a one-bar count (1 2 3 4) before the pattern, starting on beat 1 of the metronome's bar, or straight away if the metronome is off
       const first = metroRunning ? nextDownbeat(c.currentTime + 0.05) : c.currentTime + 0.1;
       let t = (first - c.currentTime) * 1000;
-      for (let k = 0; k < 4; k++) setTimeout(() => say(String(k + 1)), t + k * beatMs);
+      for (let k = 0; k < 4; k++) setTimeout(() => setCount(k + 1), t + k * beatMs);
       t += 4 * beatMs;
-      setTimeout(() => say('listen…'), t);        // the pattern starts here
+      setTimeout(() => setCount(0), t);           // the pattern starts here: the count clears
       melody.forEach((n, k) => {
         const ms = rhythm[k] * beatMs;
         setTimeout(() => { tone(n); dbg('  play', (k + 1) + '/' + melody.length, padName(n)); if (showVisual) flash(n, Math.min(180, ms * 0.5), true); }, t);
@@ -963,7 +1037,7 @@
       });
       setTimeout(() => {
         dbg('  your turn: pads live, expecting note 1', padName(melody[0]));
-        state = 'input'; setPads(true); playBtn.disabled = false; playBtn.classList.remove('mg-spinning');   // play = hear it again; the reel stops
+        setCount(0); state = 'input'; setPads(true); playBtn.disabled = false; playBtn.classList.remove('mg-spinning');   // play = hear it again; the reel stops
         say('your turn');
       }, t);
     });
@@ -1203,11 +1277,17 @@
   const nameEl = document.getElementById('mg-name'), beforeBottom = document.getElementById('mg-bottom');
   const makeReveal = id => { const c = nameEl.cloneNode(true); c.id = id; c.setAttribute('aria-hidden', 'true'); nameEl.parentNode.insertBefore(c, beforeBottom); return c; };
   const rev = makeReveal('mg-name-rev'), rev2 = makeReveal('mg-name-rev2');
+  // The count-in: a huge numeral in the text colour, on top of the pads and game bar (it ignores taps).
+  const countEl = document.createElement('div'); countEl.id = 'mg-count'; countEl.className = 'mg-countwrap'; countEl.setAttribute('aria-hidden', 'true');
+  stageEl.parentNode.insertBefore(countEl, stageEl);
+  function setCount(n) { countEl.textContent = n || ''; countEl.classList.toggle('mg-on', !!n); }
+  const setMask = (el, m) => { if (el._m !== m) { el._m = m; el.style.webkitMask = m; el.style.mask = m; } };
   const rootEl = document.getElementById('memgame');
   function litness(p) { return p._lvl || 0; }   // 1 lit .. 0 at rest, from the Bayer level the pad is at (the play circle never lights)
   (function updateReveal() {
     if (!alive || !rev.isConnected) return;
-    if (gameRoot.classList.contains('mg-ingame')) return requestAnimationFrame(updateReveal);   // the name is hidden during a game: nothing to mask
+    const ingame = gameRoot.classList.contains('mg-ingame');
+    if (ingame) return requestAnimationFrame(updateReveal);   // the name is hidden during a game: nothing to mask
     const nr = rev.getBoundingClientRect();
     const k = rev.offsetWidth / nr.width || 1;                 // allows for any scaling around the widget
     const resting = [], lit = [];
@@ -1219,8 +1299,7 @@
     });
     const none = 'linear-gradient(transparent, transparent)';   // 'none' would show the whole word
     const m1 = resting.join(',') || none, m2 = lit.join(',') || none;
-    if (m1 !== lastMask) { lastMask = m1; rev.style.webkitMask = m1; rev.style.mask = m1; }
-    if (m2 !== lastMask2) { lastMask2 = m2; rev2.style.webkitMask = m2; rev2.style.mask = m2; }
+    setMask(rev, m1); setMask(rev2, m2);
     requestAnimationFrame(updateReveal);
   })();
 
