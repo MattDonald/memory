@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>1-bit talking head</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<style>
+:root{--bg:#fff;--fg:#000;--dim:#6b6b6b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--fg:#fff;--dim:#9a9a9a}}
+:root[data-theme="dark"]{--bg:#000;--fg:#fff;--dim:#9a9a9a}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:22px/1.25 'VT323',ui-monospace,Menlo,monospace;padding:16px}
+h1{font-weight:400;font-size:34px;margin:0 0 4px}
+.lede{color:var(--dim);margin:0 0 16px;max-width:60ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:20px;align-items:start;max-width:1100px}
+.win{border:2px solid var(--fg);box-shadow:5px 5px 0 var(--fg);background:var(--bg)}
+.bar{border-bottom:2px solid var(--fg);background:repeating-linear-gradient(var(--fg) 0 1px,transparent 1px 4px);text-align:center;padding:1px 0}
+.bar span{background:var(--bg);padding:0 10px}
+.body{padding:12px;display:grid;gap:10px}
+button,select,.btn{font:inherit;color:var(--fg);background:var(--bg);border:2px solid var(--fg);padding:2px 10px;cursor:pointer;border-radius:0;text-decoration:none;display:inline-block}
+button:hover,.btn:hover,.on{background:var(--fg);color:var(--bg)}
+button:focus-visible,select:focus-visible,input:focus-visible,.slot:focus-within{outline:3px dotted var(--fg);outline-offset:2px}
+input[type=text],textarea{font:inherit;color:var(--fg);background:var(--bg);border:2px solid var(--fg);padding:2px 6px;width:100%;border-radius:0}
+textarea{font-size:16px;height:120px;resize:vertical}
+input[type=range]{accent-color:var(--fg);width:100%}
+input[type=color]{width:44px;height:28px;border:2px solid var(--fg);padding:0;background:none}
+label.f{display:grid;grid-template-columns:110px 1fr 44px;gap:8px;align-items:center}
+label.f output{text-align:right}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#pv{width:100%;max-width:360px;image-rendering:pixelated;border:2px solid var(--fg);background:#fff;display:block;margin:auto}
+#empty{margin:0;text-align:center;color:var(--dim)}
+#st{color:var(--dim);min-height:1.25em}
+#slots{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.slot{display:grid;gap:4px;cursor:pointer;position:relative}
+.slot .box{aspect-ratio:1;border:2px dashed var(--fg);display:grid;place-items:center;overflow:hidden;position:relative}
+.slot.has .box{border-style:solid}
+.slot canvas{max-width:100%;max-height:100%;image-rendering:pixelated}
+.slot .hint{position:absolute;text-align:center;color:var(--dim);pointer-events:none}
+.slot.has .hint{display:none}
+.slot.over .box{background:var(--fg)}
+#sheetImg{max-width:100%;image-rendering:pixelated;border:2px solid var(--fg);background:#fff}
+.sw{display:flex;gap:8px;align-items:center}
+</style>
+</head>
+<body>
+<h1>1-bit talking head</h1>
+<p class="lede">drop in four stills of your memoji, tune the dither, watch it talk, export a sprite sheet.</p>
+<div class="grid">
+
+<section class="win"><div class="bar"><span>preview</span></div><div class="body">
+<canvas id="pv" width="1" height="1"></canvas>
+<p id="empty">load your frames to start</p>
+<div class="row">
+<button id="mic">mic</button>
+<label class="btn">audio file<input id="aud" type="file" accept="audio/*" hidden></label>
+<button id="stop">stop</button>
+</div>
+<div class="row"><input type="text" id="txt" value="hello, it’s me, a very small man" aria-label="text to speak" style="flex:1;min-width:140px"><button id="say">talk</button></div>
+<div id="st"></div>
+<label class="f">frame rate<input type="range" data-k="fps" min="4" max="16" value="10"><output>10</output></label>
+<label class="f">mouth gain<input type="range" data-k="sens" min="10" max="150" value="50"><output>50</output></label>
+<label class="f">head bob<input type="checkbox" data-k="bob"><span></span></label>
+</div></section>
+
+<section class="win"><div class="bar"><span>frames</span></div><div class="body">
+<div id="slots"></div>
+<label class="btn" style="justify-self:start">load four at once<input id="many" type="file" accept="image/*" multiple hidden></label>
+<span style="color:var(--dim)">order is by file name: closed, half, wide, blink. keep the head framed identically in each.</span>
+</div></section>
+
+<section class="win"><div class="bar"><span>1-bit</span></div><div class="body">
+<label class="f">width px<input type="range" data-k="w" min="64" max="320" step="8" value="160"><output>160</output></label>
+<label class="f">threshold<input type="range" data-k="t" min="40" max="220" value="128"><output>128</output></label>
+<label class="f">contrast<input type="range" data-k="c" min="-50" max="80" value="0"><output>0</output></label>
+<label class="f">brightness<input type="range" data-k="b" min="-60" max="60" value="0"><output>0</output></label>
+<div class="row">
+<select data-k="m" aria-label="dither"><option value="atkinson">atkinson</option><option value="bayer">bayer 4x4</option><option value="thresh">plain threshold</option></select>
+<label class="sw"><input type="checkbox" data-k="inv">invert</label>
+</div>
+<div class="row">
+<label class="sw">ink <input type="color" data-k="ink" value="#000000"></label>
+<label class="sw">paper <input type="color" data-k="paper" value="#ffffff"></label>
+</div>
+</div></section>
+
+<section class="win" id="ex" hidden><div class="bar"><span>export</span></div><div class="body">
+<img id="sheetImg" alt="sprite sheet: closed, half, wide, blink">
+<div class="row"><a class="btn" id="dl" download="talking-head.png">download png</a><button id="cp">copy snippet</button></div>
+<span style="color:var(--dim)">if the download is blocked here, press and hold or right-click the sheet to save it.</span>
+<textarea id="snip" readonly aria-label="embed snippet"></textarea>
+</div></section>
+
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const N=['closed','half open','wide open','blink'];
+const src=[],out=[],tiles=[];
+let W=0,H=0,cur=0,tick=0,ti,mode='idle',queue=[],ac,an,buf,node,aud,stream;
+let blinkAt=performance.now()+2500,blinkUntil=0;
+const S={w:160,t:128,c:0,b:0,m:'atkinson',inv:false,ink:'#000000',paper:'#ffffff',fps:10,sens:50,bob:false};
+const hex=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const BAY=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
+const any=()=>out.find(Boolean);
+const status=t=>$('#st').textContent=t;
+const pv=$('#pv'),px=pv.getContext('2d');
+
+function proc(i){
+  const im=src[i];if(!im){out[i]=null;return}
+  const c=document.createElement('canvas');c.width=W;c.height=H;
+  const x=c.getContext('2d',{willReadFrequently:true});
+  x.fillStyle='#fff';x.fillRect(0,0,W,H);x.imageSmoothingQuality='high';
+  const s=Math.max(W/im.naturalWidth,H/im.naturalHeight),dw=im.naturalWidth*s,dh=im.naturalHeight*s;
+  x.drawImage(im,(W-dw)/2,(H-dh)/2,dw,dh);
+  const d=x.getImageData(0,0,W,H),p=d.data,g=new Float32Array(W*H);
+  const C=S.c*2.55,f=259*(C+255)/(255*(259-C));
+  for(let k=0;k<g.length;k++){const v=.299*p[k*4]+.587*p[k*4+1]+.114*p[k*4+2];g[k]=Math.max(0,Math.min(255,f*(v-128)+128+S.b*2.55))}
+  const bit=new Uint8Array(W*H),t=S.t;
+  if(S.m==='bayer'){
+    for(let y=0;y<H;y++)for(let xx=0;xx<W;xx++){const k=y*W+xx;bit[k]=g[k]+(128-t)>(BAY[(y&3)*4+(xx&3)]+.5)*16?1:0}
+  }else if(S.m==='atkinson'){
+    const nb=[[1,0],[2,0],[-1,1],[0,1],[1,1],[0,2]];
+    for(let y=0;y<H;y++)for(let xx=0;xx<W;xx++){
+      const k=y*W+xx,o=g[k],n=o>t?255:0;bit[k]=n?1:0;const e=(o-n)/8;
+      for(const [dx,dy] of nb){const X=xx+dx,Y=y+dy;if(X>=0&&X<W&&Y<H)g[Y*W+X]+=e}
+    }
+  }else for(let k=0;k<g.length;k++)bit[k]=g[k]>t?1:0;
+  const a=hex(S.ink),q=hex(S.paper);
+  for(let k=0;k<bit.length;k++){const on=S.inv?1-bit[k]:bit[k],col=on?q:a;p[k*4]=col[0];p[k*4+1]=col[1];p[k*4+2]=col[2];p[k*4+3]=255}
+  x.putImageData(d,0,0);out[i]=c;
+}
+function procAll(){
+  const b=src.find(Boolean);
+  if(b){W=S.w;H=Math.round(W*b.naturalHeight/b.naturalWidth);for(let i=0;i<4;i++)proc(i)}
+  render();
+}
+function drawFrame(f,dy=0){
+  const o=out[f]||any();
+  px.fillStyle=S.paper;px.fillRect(0,0,pv.width,pv.height);
+  if(o)px.drawImage(o,0,-dy);
+}
+function render(){
+  tiles.forEach((cv,i)=>{
+    const o=out[i],lab=cv.closest('.slot');
+    if(o){cv.width=W;cv.height=H;cv.getContext('2d').drawImage(o,0,0);lab.classList.add('has')}
+    else{cv.width=1;cv.height=1;lab.classList.remove('has')}
+  });
+  pv.width=W||1;pv.height=H||1;drawFrame(cur);
+  $('#empty').hidden=!!any();
+  sheet();
+}
+function sheet(){
+  const has=!!any();$('#ex').hidden=!has;if(!has)return;
+  const c=document.createElement('canvas');c.width=W*4;c.height=H;const x=c.getContext('2d');
+  for(let i=0;i<4;i++){const o=out[i]||any();x.drawImage(o,i*W,0)}
+  const u=c.toDataURL('image/png');
+  $('#sheetImg').src=u;$('#dl').href=u;
+  $('#snip').value=
+`<canvas id="head" width="${W}" height="${H}" style="width:${W*2}px;image-rendering:pixelated"></canvas>
+<script>
+const FW=${W}, FH=${H}, sheet=new Image();
+sheet.src='talking-head.png'; // upload the exported png next to your page
+const head=document.getElementById('head').getContext('2d');
+// frames: 0 closed, 1 half open, 2 wide open, 3 blink
+function setFrame(i){head.clearRect(0,0,FW,FH);head.drawImage(sheet,i*FW,0,FW,FH,0,0,FW,FH)}
+sheet.onload=()=>setFrame(0);
+<\/script>`;
+}
+
+/* loading */
+const load=f=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(f)});
+async function loadMany(files,start=0){
+  const list=[...files].filter(f=>f.type.startsWith('image/')).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+  for(let k=0;k<list.length&&start+k<4;k++){
+    try{src[start+k]=await load(list[k])}catch(e){status('couldn’t read '+list[k].name)}
+  }
+  procAll();
+}
+N.forEach((n,i)=>{
+  const l=document.createElement('label');l.className='slot';
+  l.innerHTML=`<div class="box"><canvas></canvas><span class="hint">drop or tap</span></div><span>${i+1}. ${n}</span><input type="file" accept="image/*" hidden>`;
+  tiles.push(l.querySelector('canvas'));
+  l.querySelector('input').onchange=e=>loadMany(e.target.files,i);
+  l.ondragover=e=>{e.preventDefault();l.classList.add('over')};
+  l.ondragleave=()=>l.classList.remove('over');
+  l.ondrop=e=>{e.preventDefault();l.classList.remove('over');loadMany(e.dataTransfer.files.length>1?e.dataTransfer.files:[e.dataTransfer.files[0]],e.dataTransfer.files.length>1?0:i)};
+  $('#slots').appendChild(l);
+});
+$('#many').onchange=e=>loadMany(e.target.files,0);
+
+/* settings */
+document.querySelectorAll('[data-k]').forEach(el=>{
+  el.oninput=()=>{
+    const k=el.dataset.k;
+    S[k]=el.type==='checkbox'?el.checked:el.type==='range'?+el.value:el.value;
+    const o=el.closest('label')&&el.closest('label').querySelector('output');if(o)o.textContent=el.value;
+    if(k==='fps')loop();else if(k!=='sens'&&k!=='bob')procAll();
+  };
+});
+
+/* talking */
+function step(){
+  tick++;let m=0;
+  if(mode==='mic'||mode==='file'){
+    an.getByteTimeDomainData(buf);let s=0;
+    for(const v of buf){const d=(v-128)/128;s+=d*d}
+    const lv=Math.sqrt(s/buf.length)*S.sens/10;m=lv>.4?2:lv>.12?1:0;
+  }else if(mode==='text'){
+    const ch=queue.shift();
+    if(ch===undefined){mode='idle';status('')}
+    else m='ao'.includes(ch)?2:'eiuy'.includes(ch)?1:0;
+  }
+  const now=performance.now();
+  if(now>blinkAt){blinkUntil=now+130;blinkAt=now+2000+Math.random()*3500}
+  cur=(now<blinkUntil&&m===0)?3:m;
+  if(W)drawFrame(cur,S.bob&&m>0&&tick%2?1:0);
+}
+function loop(){clearInterval(ti);ti=setInterval(step,1000/S.fps)}
+function stopAudio(){
+  if(aud){aud.pause();aud=null}
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  if(node){try{node.disconnect()}catch(e){}node=null}
+  mode='idle';queue=[];status('');
+}
+function initAudio(){ac=ac||new AudioContext();an=ac.createAnalyser();an.fftSize=1024;buf=new Uint8Array(an.fftSize)}
+$('#mic').onclick=async()=>{
+  stopAudio();
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:true});initAudio();await ac.resume();node=ac.createMediaStreamSource(stream);node.connect(an);mode='mic';status('listening')}
+  catch(e){status('mic isn’t available here. try an audio file or typed text.')}
+};
+$('#aud').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  stopAudio();
+  try{
+    initAudio();aud=new Audio(URL.createObjectURL(f));node=ac.createMediaElementSource(aud);
+    node.connect(an);an.connect(ac.destination);ac.resume();aud.play();mode='file';status('playing '+f.name);
+    aud.onended=()=>{mode='idle';status('')};
+  }catch(err){status('couldn’t play that file')}
+};
+$('#say').onclick=()=>{stopAudio();queue=[...$('#txt').value.toLowerCase()];mode='text';status('talking')};
+$('#stop').onclick=stopAudio;
+
+$('#cp').onclick=async()=>{
+  const t=$('#snip');
+  try{await navigator.clipboard.writeText(t.value);$('#cp').textContent='copied'}
+  catch(e){t.select();$('#cp').textContent='selected, copy it'}
+  setTimeout(()=>$('#cp').textContent='copy snippet',1800);
+};
+loop();render();
+</script>
+</body>
+</html>
