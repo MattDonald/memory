@@ -18,7 +18,7 @@
    Sizes in em are relative to --mg-size-base. */
 #memgame {
   --mg-font: system-ui, sans-serif;        /* the font for everything */
-  --mg-font-h1: var(--mg-font);            /* a different font just for the h1 (mattdonald) */
+  --mg-font-name: var(--mg-font);          /* a different font just for the name (mattdonald): see the NAME FONT note in the 1-bit block */
   --mg-size-base: 16px;                    /* base size: every em size below is relative to this */
   --mg-size-h1: clamp(1.5em, 7vw, 3em);    /* h1: mattdonald */
   --mg-size-h2: 1em;                       /* h2: always creating */
@@ -59,20 +59,20 @@
 #memgame svg { fill:currentColor; }
 #mg-stage { position:relative; flex:1; min-height:0; }
 #mg-pads { position:absolute; inset:0; }
-#mg-top { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:1em; padding:.75em 1em 0; text-align:left; }
+#mg-top { display:flex; flex-wrap:nowrap; justify-content:space-between; align-items:center; gap:1em; padding:.75em 1em 0; text-align:left; }
 .mg-namewrap { position:absolute; left:50%; top:50%; width:max-content; display:flex; flex-direction:column; align-items:flex-end;
   transform:translate(-50%, -50%); white-space:nowrap; pointer-events:none; }
-.mg-name-text { align-self:stretch; margin:0; font-family:var(--mg-font-h1); font-size:var(--mg-size-h1); font-weight:var(--mg-weight-h1); line-height:1.1; text-align:center; }
+.mg-name-text { align-self:stretch; margin:0; font-family:var(--mg-font-name); font-size:var(--mg-size-h1); font-weight:var(--mg-weight-h1); line-height:1.1; text-align:center; }
 .mg-tag { margin:.15em 0 0; font-size:var(--mg-size-h2); font-weight:var(--mg-weight-h2); line-height:1.3; }   /* right edge level with the name */
 .mg-namewrap::before { content:''; display:block; flex:none; font-size:var(--mg-size-h2); height:1.45em; }   /* mirrors the tagline's height above the name, so the name itself stays dead centre at any size */
 /* two copies of the name sit above the pads; the script masks each to the pads' circles */
 #mg-name-rev { color:var(--mg-pad-lit-fill); z-index:2; }
 #mg-name-rev2 { color:var(--mg-pad-fill); z-index:2; }   /* the inverse: shows through lit pads, so the word is never lost */
-#mg-bankbar { display:flex; align-items:center; gap:.25em; }
+#mg-bankbar { display:flex; align-items:center; gap:.25em; flex:1 1 auto; min-width:0; }   /* gives way to the nav, never the other way round */
 #memgame #mg-bankbar .mg-icon { padding:.4em .5em; }
-#mg-bankdisplay { font-size:var(--mg-size-bank); }
-#mg-nav { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.5em; text-align:right; }
-#memgame .mg-link { background:var(--mg-offwhite); border:0; border-radius:999px; padding:.4em 1em; font:inherit; font-size:var(--mg-size-nav); line-height:1.2; color:var(--mg-bg); cursor:pointer; text-decoration:none; }
+#mg-bankdisplay { font-size:var(--mg-size-bank); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }   /* a long bank name is cut with an ellipsis, so the nav stays on the same row */
+#mg-nav { display:flex; flex:none; flex-wrap:nowrap; justify-content:flex-end; gap:.5em; text-align:right; }
+#memgame .mg-link { white-space:nowrap; background:var(--mg-offwhite); border:0; border-radius:999px; padding:.4em 1em; font:inherit; font-size:var(--mg-size-nav); line-height:1.2; color:var(--mg-bg); cursor:pointer; text-decoration:none; }
 #memgame dialog { --mg-sheet-gap:24px;   /* how far short of the top of the screen the card stops */
   position:fixed; inset:auto 0 0 0; margin:0; padding:0; border:0; border-radius:16px 16px 0 0;
   width:100%; max-width:none; height:calc(100vh - var(--mg-sheet-gap) - env(safe-area-inset-top,0px)); height:calc(100dvh - var(--mg-sheet-gap) - env(safe-area-inset-top,0px));
@@ -119,17 +119,12 @@
 #memgame .mg-pad::after { content:none; pointer-events:none; font-family:var(--mg-font); font-weight:var(--mg-weight-key); font-size:calc(var(--size, 96px) * .15); line-height:1; }
 #memgame.mg-ingame .mg-pad::after { content:attr(data-key); }
 @media (prefers-reduced-motion: reduce) { #memgame .mg-pad, #mg-playgroup, #mg-play .mg-reel { animation:none; } }
-/* ---- game mode: the nav and the central text step aside, the round counter appears ---- */
+/* ---- game mode: the nav and the central text step aside, the game bar appears ---- */
 #memgame.mg-ingame #mg-nav, #memgame.mg-ingame .mg-namewrap { display:none; }
-#mg-round { display:none; position:absolute; z-index:1; top:calc(1em + env(safe-area-inset-top,0px)); left:50%; transform:translateX(-50%);
-  font-size:var(--mg-size-round); line-height:1.3; white-space:nowrap; pointer-events:none; }
-#memgame.mg-ingame #mg-round { display:block; }
-@media (orientation: portrait) {   /* portrait: down the left edge, in the middle, reading bottom to top */
-  #mg-round { top:50%; left:calc(.75em + env(safe-area-inset-left,0px)); transform:translateY(-50%) rotate(180deg); writing-mode:vertical-rl; }
-}
+#mg-round { font-size:var(--mg-size-round); line-height:1.3; white-space:nowrap; text-align:center; pointer-events:none; }
 /* ---- the wipe: an off-white overlay that sweeps across the screen, left to right ---- */
 #mg-wipe { display:none; position:absolute; inset:0; z-index:20; align-items:center; justify-content:center; background:var(--mg-offwhite); }
-#mg-wipe-text { color:var(--mg-bg); font-family:var(--mg-font-h1); font-size:var(--mg-size-h1); font-weight:var(--mg-weight-h1); line-height:1.1; text-align:center; padding:0 1em; }
+#mg-wipe-text { color:var(--mg-bg); font-family:var(--mg-font); font-size:var(--mg-size-h1); font-weight:var(--mg-weight-h1); line-height:1.1; text-align:center; padding:0 1em; }
 
 /* ---- keyboard reference: circles, desktop only (not touch screens), not clickable ---- */
 #mg-keys { --mg-key-size:30px; --mg-key-gap:4px; --mg-key-dim:.3;   /* circle size, space between circles, opacity of keys with no pad */
@@ -163,6 +158,11 @@
 #memgame #mg-metro { margin-left:calc(var(--mg-gap-point-metro) - var(--mg-icon-gap)); }
 #memgame #mg-midi { margin-left:calc(var(--mg-gap-metro-midi) - var(--mg-icon-gap)); }
 
+/* NAME FONT: to use your own font for 'mattdonald' only, paste the base64 of its WOFF2 below and uncomment. It only needs m a t d o n l;
+   anything it lacks falls back to the pixel font, and the round text, messages and everything else keep the pixel font.
+@font-face { font-family: 'BNRiley'; src: url(data:font/woff2;base64,PASTE_BASE64_HERE) format('woff2'); font-display: block; }
+#memgame { --mg-font-name: 'BNRiley', var(--mg-font); }
+*/
 /* ============ 1-BIT LAYER: two tones only, hard pixel edges, stepped motion. Delete this whole block to get the smooth version back. ============ */
 #memgame {
   --mg-font: 'Pixelify Sans', 'Courier New', ui-monospace, monospace;
@@ -199,10 +199,10 @@
 #mg-play .mg-reel { fill: var(--mg-fg); animation-timing-function: steps(12); }
 #memgame { --mg-notch: polygon(0 var(--mg-px), var(--mg-px) var(--mg-px), var(--mg-px) 0, calc(100% - var(--mg-px)) 0, calc(100% - var(--mg-px)) var(--mg-px), 100% var(--mg-px), 100% calc(100% - var(--mg-px)), calc(100% - var(--mg-px)) calc(100% - var(--mg-px)), calc(100% - var(--mg-px)) 100%, var(--mg-px) 100%, var(--mg-px) calc(100% - var(--mg-px)), 0 calc(100% - var(--mg-px))); }
 /* pills: a notched rectangle (two bars, so nothing clips the shadow) with a half-dithered shadow one chunk down and right */
-#memgame .mg-link, #mg-playgroup p { border-radius: 0; clip-path: none; position: relative; isolation: isolate;
+#memgame .mg-link, #mg-playgroup p, #mg-bottom { border-radius: 0; clip-path: none; position: relative; isolation: isolate;
   background: linear-gradient(var(--mg-fg), var(--mg-fg)) 0 var(--mg-px) / 100% calc(100% - 2 * var(--mg-px)) no-repeat,
               linear-gradient(var(--mg-fg), var(--mg-fg)) var(--mg-px) 0 / calc(100% - 2 * var(--mg-px)) 100% no-repeat; }
-#memgame .mg-link::before, #mg-playgroup p::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--mg-fg); clip-path: var(--mg-notch); pointer-events: none;
+#memgame .mg-link::before, #mg-playgroup p::before, #mg-bottom::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--mg-fg); clip-path: var(--mg-notch); pointer-events: none;
   translate: var(--mg-px) var(--mg-px); -webkit-mask: var(--mg-shadow-dither) 0 0 / var(--mg-tile) var(--mg-tile); mask: var(--mg-shadow-dither) 0 0 / var(--mg-tile) var(--mg-tile); }
 #mg-wipe { background: transparent; color: var(--mg-fg); }   /* the overlay is drawn by the script, as dithered cells */
 #mg-wipe-canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; }
@@ -218,6 +218,13 @@
 #memgame button.mg-icon { transition: none; }
 #memgame button.mg-icon[aria-pressed="false"], #memgame button.mg-icon:disabled, #memgame button.mg-icon[aria-disabled="true"], #mg-keys .mg-key.mg-key-off { opacity: 1; -webkit-mask: var(--mg-dim-dither) 0 0 / var(--mg-tile) var(--mg-tile); mask: var(--mg-dim-dither) 0 0 / var(--mg-tile) var(--mg-tile); }
 #mg-chances .mg-chance { transition: none; }
+/* ---- the game bar: lives left, round in the middle, icons right, along the bottom, a little in from the sides ---- */
+#mg-bottom { display: none; }
+#memgame.mg-ingame #mg-bottom { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; position: absolute; z-index: 5; left: 50%; transform: translateX(-50%);
+  bottom: calc(1em + env(safe-area-inset-bottom, 0px)); width: min(500px, calc(100% - 2em)); box-sizing: border-box; padding: .5em 1.1em; }
+#mg-bottom #mg-status { justify-self: start; }
+#mg-bottom #mg-controls { justify-self: end; flex-wrap: nowrap; }
+#mg-bottom #mg-round, #mg-bottom #mg-chances, #memgame #mg-bottom button.mg-icon { color: var(--mg-bg); }   /* off-white bar, orange icons and text (in dark mode: orange bar, black icons) */
 #memgame dialog { border-radius: 0; transition: transform .3s steps(6); }
 #memgame .mg-grab::before { border-radius: 0; }
 /* ================================================================================================================================== */
@@ -243,20 +250,20 @@
 <div class="mg-msgslot"><p id="mg-message">press space to start</p></div>
 </div></div>
 <!-- the two reveal copies of the name are cloned from #mg-name by the script: edit the name above only -->
-<div id="mg-bottom">
+<div id="mg-bottom">   <!-- the game bar: lives, round, icons. Only shown during a game. -->
 <div id="mg-status">
 <div id="mg-chances" role="img">
 <span id="mg-chanceIcons"></span>
 </div>
 </div>
+<div id="mg-round" aria-live="polite"></div>
 <div id="mg-controls">
 <button id="mg-visual" class="mg-icon" aria-label="visual" aria-pressed="true"><svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><path d="M36.6658 0H7.54402L13.4917 5.94926L6.21725 13.223C5.41921 14.0299 4.81176 15.0052 4.43936 16.0774L0 11.6395V36.6676C0 38.5073 1.49221 40 3.33418 40H36.6658C38.5077 40 40 38.5073 40 36.6676V3.33509C40 1.49264 38.5077 0 36.6658 0ZM36.7406 29.8985C36.3698 30.2482 35.8769 30.4387 35.3674 30.4292C34.8579 30.4197 34.3724 30.211 34.0149 29.8478L24.9733 20.8091L23.9909 21.7917L26.1532 23.9546C26.4319 24.2738 26.5788 24.6871 26.564 25.1106C26.5492 25.5341 26.3739 25.9362 26.0736 26.2351C25.7734 26.5341 25.3707 26.7076 24.9472 26.7205C24.5237 26.7334 24.1112 26.5846 23.7934 26.3044L20.5553 23.0654L19.0283 23.506L22.811 27.287C22.9655 27.442 23.0878 27.6262 23.1707 27.8288C23.2537 28.0314 23.2957 28.2484 23.2942 28.4673C23.2952 28.6864 23.253 28.9036 23.1699 29.1064C23.0868 29.3091 22.9644 29.4935 22.8099 29.6488C22.6553 29.8041 22.4717 29.9274 22.2694 30.0115C22.0671 30.0956 21.8501 30.1389 21.6311 30.1389H21.6284C21.1862 30.1375 20.7622 29.9619 20.4484 29.6502L17.0715 26.2697L14.5996 23.7997L13.6172 24.7824L18.1954 29.3618C18.5048 29.668 18.6835 30.0822 18.694 30.5174C18.7045 30.9526 18.5458 31.3749 18.2514 31.6956C18.0943 31.8753 17.9029 32.0218 17.6883 32.1263C17.4738 32.2309 17.2404 32.2914 17.0021 32.3044H16.9861C16.6047 32.2969 16.2418 32.1385 15.977 31.8638L7.19963 23.0814C6.02381 21.9034 5.36342 20.3068 5.36342 18.6422C5.36342 16.9775 6.02381 15.381 7.19963 14.203L14.2846 7.12147L30.2323 7.05738C30.6197 7.05889 30.9981 7.175 31.3198 7.39105C31.6415 7.6071 31.8921 7.91345 32.0402 8.27162C32.1883 8.62979 32.2272 9.02377 32.1521 9.40399C32.0769 9.78422 31.891 10.1337 31.6177 10.4085C31.4362 10.5902 31.2206 10.7342 30.9833 10.8323C30.746 10.9304 30.4917 10.9806 30.2349 10.98H20.5872L36.7005 27.0921C36.8963 27.2897 37.0506 27.5245 37.1542 27.7827C37.2579 28.0409 37.3087 28.3173 37.3038 28.5955C37.3022 28.8394 37.2515 29.0805 37.1547 29.3043C37.058 29.5282 36.9171 29.7303 36.7406 29.8985Z"/></svg></button>
 <button id="mg-metro" class="mg-icon" aria-label="metronome" aria-pressed="true"><svg viewBox="0 0 29 40" aria-hidden="true" focusable="false"><path d="M0 40L0.0449168 35.5989L10.2051 0H17.0727L20.064 10.4794L17.6065 11.1951L15.149 2.58244H12.1287L2.5526 36.1116L2.5605 37.4176H8.78607C9.01917 36.2916 9.62873 35.2812 10.5123 34.556C11.3958 33.8309 12.4994 33.4353 13.6376 33.4357C13.8278 33.4357 14.0128 33.4597 14.1951 33.4838C15.2267 33.6067 16.1948 34.0517 16.9644 34.7568C17.7341 35.4619 18.267 36.392 18.4891 37.4176H24.7146V36.0555L21.6203 25.2504L24.0804 24.5346L27.2672 35.8473L27.2725 40H0Z"/><path d="M14.1047 33.4766C14.1346 33.4802 14.1645 33.4828 14.1945 33.4846C15.0189 33.5914 15.7323 33.8585 16.3692 34.2885C16.4114 34.3241 16.4547 34.3597 16.4987 34.3953L23.8024 17.4264C25.1183 17.4264 26.3022 16.6412 26.8201 15.4288C27.3591 14.1629 27.0763 12.7182 26.1382 11.9731L29 5.31533L26.6535 4.28982L23.7997 10.8087C22.4838 10.8087 21.3 11.5938 20.7821 12.8036C20.243 14.0668 20.5495 15.557 21.4955 16.2887L14.1047 33.4766Z"/></svg></button>
 <button id="mg-midi" class="mg-icon" aria-label="generate midi" disabled><svg viewBox="0 0 41 40" aria-hidden="true" focusable="false"><path d="M41 20.5982C40.9996 17.8926 40.4691 15.2136 39.4385 12.7141C38.408 10.2147 36.8977 7.94371 34.994 6.03095C33.0902 4.1182 30.8303 2.60112 28.3431 1.56632C25.856 0.531516 23.1904 -0.000721744 20.4986 7.3455e-07C17.8071 -0.000360486 15.1418 0.532152 12.655 1.56711C10.1682 2.60208 7.90852 4.1192 6.00505 6.03192C4.10157 7.94464 2.59155 10.2155 1.56121 12.7148C0.53086 15.2141 0.00035933 17.8929 0 20.5982C0 29.5647 5.70821 37.1698 13.6658 40V34.3313H27.3315V40C35.2891 37.1698 41 29.5647 41 20.5982ZM6.83287 24.0335C6.37609 24.0465 5.92134 23.9673 5.49554 23.8006C5.06974 23.6339 4.68152 23.383 4.35386 23.0629C4.02619 22.7427 3.76573 22.3597 3.58787 21.9366C3.41001 21.5136 3.31838 21.0589 3.31838 20.5996C3.31838 20.1403 3.41001 19.6856 3.58787 19.2625C3.76573 18.8394 4.02619 18.4565 4.35386 18.1363C4.68152 17.8162 5.06974 17.5653 5.49554 17.3986C5.92134 17.2318 6.37609 17.1526 6.83287 17.1656C7.72223 17.1909 8.56672 17.5638 9.18688 18.2051C9.80704 18.8463 10.154 19.7053 10.154 20.5996C10.154 21.4939 9.80704 22.3529 9.18688 22.9941C8.56672 23.6354 7.72223 24.0082 6.83287 24.0335ZM10.2507 14.0769C9.7939 14.0899 9.33915 14.0107 8.91334 13.8439C8.48754 13.6772 8.09934 13.4263 7.77167 13.1062C7.44401 12.786 7.18354 12.4031 7.00568 11.98C6.82783 11.5569 6.73617 11.1022 6.73617 10.6429C6.73617 10.1836 6.82783 9.72896 7.00568 9.30586C7.18354 8.88276 7.44401 8.49983 7.77167 8.17967C8.09934 7.85951 8.48754 7.60863 8.91334 7.4419C9.33915 7.27517 9.7939 7.19598 10.2507 7.20897C11.14 7.23428 11.9845 7.60714 12.6047 8.24837C13.2249 8.8896 13.5718 9.74862 13.5718 10.6429C13.5718 11.5372 13.2249 12.3962 12.6047 13.0375C11.9845 13.6787 11.14 14.0516 10.2507 14.0769ZM20.4986 10.3005C20.0419 10.3133 19.5872 10.2339 19.1614 10.067C18.7357 9.9001 18.3475 9.6491 18.02 9.32882C17.6925 9.00853 17.4322 8.62546 17.2545 8.20229C17.0768 7.77912 16.9853 7.32444 16.9855 6.86512C16.9857 6.40581 17.0775 5.95119 17.2555 5.52817C17.4336 5.10514 17.6942 4.7223 18.022 4.40227C18.3498 4.08225 18.7381 3.83152 19.1639 3.66496C19.5898 3.49841 20.0446 3.41941 20.5014 3.43258C21.3907 3.45824 22.235 3.83147 22.8549 4.47295C23.4749 5.11443 23.8215 5.97358 23.8211 6.86785C23.8208 7.76213 23.4735 8.62102 22.8531 9.262C22.2326 9.90298 21.388 10.2755 20.4986 10.3005ZM37.5822 20.5982C37.5951 21.0574 37.5163 21.5144 37.3504 21.9424C37.1846 22.3704 36.935 22.7606 36.6165 23.09C36.2979 23.4193 35.917 23.6811 35.496 23.8599C35.0751 24.0386 34.6227 24.1307 34.1658 24.1307C33.7088 24.1307 33.2565 24.0386 32.8355 23.8599C32.4146 23.6811 32.0336 23.4193 31.715 23.09C31.3965 22.7606 31.147 22.3704 30.9811 21.9424C30.8152 21.5144 30.7364 21.0574 30.7493 20.5982C30.7745 19.7043 31.1455 18.8555 31.7834 18.2322C32.4214 17.6088 33.276 17.2601 34.1658 17.2601C35.0555 17.2601 35.9101 17.6088 36.5481 18.2322C37.186 18.8555 37.557 19.7043 37.5822 20.5982ZM30.7493 7.20897C31.2061 7.19598 31.6609 7.27517 32.0867 7.4419C32.5125 7.60863 32.9007 7.85951 33.2283 8.17967C33.556 8.49983 33.8165 8.88276 33.9943 9.30586C34.1722 9.72896 34.2638 10.1836 34.2638 10.6429C34.2638 11.1022 34.1722 11.5569 33.9943 11.98C33.8165 12.4031 33.556 12.786 33.2283 13.1062C32.9007 13.4263 32.5125 13.6772 32.0867 13.8439C31.6609 14.0107 31.2061 14.0899 30.7493 14.0769C29.86 14.0516 29.0155 13.6787 28.3953 13.0375C27.7751 12.3962 27.4282 11.5372 27.4282 10.6429C27.4282 9.74862 27.7751 8.8896 28.3953 8.24837C29.0155 7.60714 29.86 7.23428 30.7493 7.20897Z"/></svg></button>
 </div>
 </div>
-<!-- Round counter (only during a game) and the full-screen wipe between scenes. -->
-<div id="mg-round" aria-live="polite"></div>
+<!-- The full-screen wipe between scenes. (The round counter now lives in the game bar above.) -->
 <div id="mg-wipe" aria-hidden="true"><div id="mg-wipe-text"></div></div>
 
 <!-- Keyboard reference (desktop only): a key is bright when it plays a pad, dim when it does not. -->
@@ -421,7 +428,7 @@
   // ---- 1-bit look: block sizes and dither levels ----
   // Block sizes in px, one set for touch screens (phones, tablets) and one for desktop. Bigger = chunkier.
   const BLOCKS = {
-    touch:   { pad: 4, pill: 4, wipe: 2, dither: 2 },
+    touch:   { pad: 6, pill: 4, wipe: 4, dither: 2 },
     desktop: { pad: 4, pill: 4, wipe: 2, dither: 2 },
   };   // pad: one cell of a pad's stepped circle (pad sizes snap to a multiple of it, and the pressed-pad shadow is one cell).  pill: the corner notch and shadow offset on pills.
        // wipe: one cell of the round-change dissolve.  dither: one dot of every dither pattern.
@@ -670,9 +677,9 @@
     const keepOut = { x: nr.left - sr.left, y: nr.top - sr.top, w: nr.width, h: nr.height };   // the name and tagline in the middle
     const kr = document.getElementById('mg-keys').getBoundingClientRect();
     const kb = kr.width ? { x: kr.left - sr.left, y: kr.top - sr.top, w: kr.width, h: kr.height } : null;   // the keyboard, when it is showing
-    const rr = roundEl.getBoundingClientRect();
-    const ri = rr.width ? { x: rr.left - sr.left, y: rr.top - sr.top, w: rr.width, h: rr.height } : null;        // the round counter, when it is showing
-    const extra = [kb, ri].filter(Boolean);
+    const br = document.getElementById('mg-bottom').getBoundingClientRect();
+    const bar = br.width ? { x: br.left - sr.left, y: br.top - sr.top, w: br.width, h: br.height } : null;          // the game bar, when it is showing
+    const extra = [kb, bar].filter(Boolean);
     const rectsApart = (A, B) => A.x + A.w + slack <= B.x || B.x + B.w + slack <= A.x || A.y + A.h + slack <= B.y || B.y + B.h + slack <= A.y;
 
     function place(size, force) {                     // try to fit everything at this size
