@@ -416,7 +416,7 @@
   const KEYBOARD = { a: 'C', w: 'C#', s: 'D', e: 'D#', d: 'E', f: 'F', t: 'F#', g: 'G', y: 'G#', h: 'A', u: 'A#', j: 'B', k: 'C (high)' };
   const DEFAULT_KEYS = ['a', 'd', 'g', 'k', 'h', 's'];   // used when a bank has no keys (C E G C A D)
 
-  // Most pads on screen (melodic banks grow to 6). Pad colours live in the css, in one place.
+  // Most pads on screen, and the most sounds a bank can have. Pad colours live in the css, in one place.
   const MAX_PADS = 6;
   // =====================================================================
 
@@ -822,10 +822,9 @@
   }
 
   function layoutPads(count) { pads.forEach((p, i) => { p.style.display = i < count ? '' : 'none'; p._shadow.style.display = p.style.display; }); updateKeyboard(); }
-  function idleCount() {      // pads shown outside a game
+  function idleCount() {      // pads shown outside a game: one for every sound in the bank (a game still uses 4 for drums, or the level's pitches)
     if (currentBank === null) return 4;
-    const b = BANKS[currentBank];
-    return b.pattern === 'drums' ? 4 : Math.min(MAX_PADS, b.files.length);
+    return Math.min(MAX_PADS, BANKS[currentBank].files.length);
   }
   function setPads(enabled) { pads.forEach(p => p.disabled = !enabled); }
   function setGameRunning(on) { playBtn.disabled = on; cycleBtn.disabled = on; }
