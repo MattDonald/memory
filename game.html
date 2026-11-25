@@ -244,7 +244,7 @@
 #memgame.mg-intro :is(#mg-pads, #mg-playgroup, #mg-name-rev, #mg-name-rev2) { visibility: hidden; }   /* the pads wait for the dither to finish, then slide in */
 #memgame.mg-preload :is(#mg-nav .mg-link, #mg-bankbar, #mg-ig, #mg-keys .mg-key, #mg-tapicon):not(.mg-in) { visibility: hidden; }
 @keyframes mg-bounce { 0% { transform: translateY(-3em); } 28% { transform: translateY(0); } 48% { transform: translateY(-1em); } 66% { transform: translateY(0); } 80% { transform: translateY(-.35em); } 92%, 100% { transform: translateY(0); } }
-.mg-bouncing { animation: mg-bounce .6s steps(5, end) both; }                                  /* a stepped bounce: it drops in and settles in hops */
+.mg-bouncing { animation: mg-bounce .7s steps(5, end) both; }                                  /* a stepped bounce: it drops in and settles in hops */
 /* ---- the count-in: a huge numeral on top of everything in the game, but under the wipe (the script adds the element) ---- */
 #memgame { --mg-count-size: 100vh; }
 .mg-countwrap { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; overflow: hidden; z-index: 10; pointer-events: none;   /* above the pads, shadows and game bar; below the wipe (20) */ user-select: none; -webkit-user-select: none;
