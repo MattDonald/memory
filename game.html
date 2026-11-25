@@ -244,7 +244,7 @@
 #memgame.mg-intro :is(#mg-pads, #mg-playgroup, #mg-name-rev, #mg-name-rev2) { visibility: hidden; }   /* the pads wait for the dither to finish, then slide in */
 #memgame.mg-preload :is(#mg-nav .mg-link, #mg-bankbar, #mg-ig, #mg-keys .mg-key, #mg-tapicon):not(.mg-in) { visibility: hidden; }
 @keyframes mg-bounce { 0% { transform: translateY(-3em); } 28% { transform: translateY(0); } 48% { transform: translateY(-1em); } 66% { transform: translateY(0); } 80% { transform: translateY(-.35em); } 92%, 100% { transform: translateY(0); } }
-.mg-bouncing { animation: mg-bounce .7s steps(5, end) both; }                                  /* a stepped bounce: it drops in and settles in hops */
+.mg-bouncing { animation: mg-bounce .6s steps(5, end) both; }                                  /* a stepped bounce: it drops in and settles in hops */
 /* ---- the count-in: a huge numeral on top of everything in the game, but under the wipe (the script adds the element) ---- */
 #memgame { --mg-count-size: 100vh; }
 .mg-countwrap { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; overflow: hidden; z-index: 10; pointer-events: none;   /* above the pads, shadows and game bar; below the wipe (20) */ user-select: none; -webkit-user-select: none;
@@ -465,8 +465,8 @@
   // ---- 1-bit look: block sizes and dither levels ----
   // Block sizes in px, one set for touch screens (phones, tablets) and one for desktop. Bigger = chunkier.
   const BLOCKS = {
-    touch:   { pad: 6, pill: 4, wipe: 4, dither: 2, intro: 4 },
-    desktop: { pad: 4, pill: 4, wipe: 2, dither: 2, intro: 4 },
+    touch:   { pad: 4, pill: 4, wipe: 2, dither: 2, intro: 2 },
+    desktop: { pad: 4, pill: 4, wipe: 2, dither: 2, intro: 2 },
   };   // pad: one cell of a pad's stepped circle (pad sizes snap to a multiple of it, and the pressed-pad shadow is one cell).  pill: the corner notch and shadow offset on pills.
        // wipe: one cell of the round-change dissolve.  dither: one dot of every dither pattern.  intro: one dot of the loading dither.
   const SHADOW_LEVEL = 8;       // dither coverage of the drop shadows, out of 16 (4x4 Bayer: 0 = nothing, 16 = solid)
@@ -475,11 +475,11 @@
   const RELEASE_LEVELS = [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4];   // ...and the steps a released pad dithers back in through, out of 16
   const DITHER_STEP_MS = 20;    // how long each of those steps lasts
   const INTRO_STEP_MS = 70;     // loading animation: how long each of its 16 dither steps lasts
-  const INTRO_PAD_GAP_MS = 140; // ...the delay between one pad starting to slide in (alternately from the left and the right) and the next
+  const INTRO_PAD_GAP_MS = 60; // ...the delay between one pad starting to slide in (alternately from the left and the right) and the next
   const INTRO_SLIDE_MS = 800;   // ...how long a pad's slide and bounce lasts
-  const INTRO_GAP_MS = 160;     // ...the delay between one nav button / the bank starting to bounce in and the next
-  const INTRO_KEY_GAP_MS = 70;  // ...and between one keyboard key and the next
-  const INTRO_BOUNCE_MS = 700;  // ...how long a nav / bank / key bounce lasts (keep in step with .mg-bouncing in the css)
+  const INTRO_GAP_MS = 100;     // ...the delay between one nav button / the bank starting to bounce in and the next
+  const INTRO_KEY_GAP_MS = 60;  // ...and between one keyboard key and the next
+  const INTRO_BOUNCE_MS = 600;  // ...how long a nav / bank / key bounce lasts (keep in step with .mg-bouncing in the css)
   const B = tapScreen ? BLOCKS.touch : BLOCKS.desktop;
   const ICON_CYCLE_DESKTOP = document.getElementById('mg-cycle').querySelector('svg').outerHTML;   // the one in the markup
   const setCycleIcon = markup => document.querySelectorAll('#mg-cycle svg, #memgame [data-from="mg-cycle"] svg').forEach(el => { el.outerHTML = markup; });   // the button and its legend copy
@@ -522,6 +522,7 @@
     gameRoot.classList.add('mg-intro', 'mg-preload'); introSet(0);
     setTimeout(() => gameRoot.classList.remove('mg-intro', 'mg-i2', 'mg-preload'), 8000);   // failsafe: the page is never left hidden
     Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 1500))]).then(() => {
+      alignLink(true);                                              // fonts are in and nothing has moved yet: set the link's final position now, so it only ever slides in to where it stays
       let k = 0;
       (function step() {
         k++; introSet(k);
@@ -529,6 +530,7 @@
         if (k < 16) { setTimeout(step, INTRO_STEP_MS); return; }
         setTimeout(() => {                                             // fully orange: back to the normal background, then the pads, nav, bank and keys come in
           gameRoot.classList.remove('mg-intro', 'mg-i2');
+          alignLink(true);                                             // (once more, with the layout settled; still before anything animates)
           const slideIn = (el, side, delay) => {                       // slides in from off-screen on one side, then rebounds back and forth as it settles
             if (!el.animate) return;
             const r = el.getBoundingClientRect(), W = gameRoot.getBoundingClientRect(), dir = side === 'left' ? -1 : 1;
@@ -766,7 +768,23 @@
 
   const padSizes = {};   // pad size per window size: it stays the same on a bank swap or a new round
 
+  function alignLink(force) {   // lines the instagram link up with what shares its row: the letters of the keyboard (desktop), or the tap icon (touch)
+    const ig = document.getElementById('mg-ig');
+    if ((gameRoot.classList.contains('mg-preload') && !force) || gameRoot.classList.contains('mg-ingame') || !ig.getBoundingClientRect().width) return;   // hidden, or mid-animation (the intro aligns it with force, before anything moves)
+    const mid = r => (r.top + r.bottom) / 2, tap = document.getElementById('mg-tapicon'), key = gameRoot.querySelector('#mg-keys .mg-white');
+    let want, have;
+    if (tap.getBoundingClientRect().width) {                                   // touch: the link's svg on the same centre line as the tap svg
+      want = mid(tap.querySelector('svg').getBoundingClientRect()); have = mid(ig.querySelector('svg').getBoundingClientRect());
+    } else if (key && key.getBoundingClientRect().width && document.createRange) {   // desktop: the link's letters on the same centre line as a bottom-row key's letter
+      const text = node => { const rg = document.createRange(); rg.selectNodeContents(node); return rg.getBoundingClientRect ? mid(rg.getBoundingClientRect()) : NaN; };
+      want = text(key); have = text(ig.firstChild);
+    }
+    if (want == null || have == null || isNaN(want) || isNaN(have) || Math.abs(have - want) < 0.5) return;
+    ig.style.bottom = (gameRoot.getBoundingClientRect().bottom - ig.getBoundingClientRect().bottom + (have - want)) + 'px';   // bottom is measured up from the screen's edge
+  }
+  if (document.fonts) document.fonts.ready.then(alignLink);   // letter positions change once the real font is in
   function scatterPads() {    // new random spots for the play group and every pad; pads never overlap each other
+    alignLink();
     const W = stageEl.clientWidth, H = stageEl.clientHeight;
     const m = WIGGLE_PX + 4;                          // keep clear of the edges
     const slack = 2 * WIGGLE_PX + MIN_GAP_PX;         // drift is a circle of WIGGLE_PX, so two pads drifting straight at each other still keep MIN_GAP_PX
