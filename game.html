@@ -47,6 +47,7 @@
   --mg-icon-size:35px;                                  /* every icon's box: the buttons, lives, legend, play and tap icons */
   --mg-tile:calc(4 * var(--mg-dpx, 2px));               /* one 4x4 Bayer dither tile; --mg-dpx (one dither dot) is set by the script from BLOCKS */
   --mg-count-size:100vh;                                /* the count-in numeral */
+  --mg-label-nudge-x:0px; --mg-label-nudge-y:0px;       /* fine-tune the letters inside the keys and pads by eye, on top of the automatic centring (right / down are positive) */
   --mg-notch:polygon(0 var(--mg-px), var(--mg-px) var(--mg-px), var(--mg-px) 0, calc(100% - var(--mg-px)) 0, calc(100% - var(--mg-px)) var(--mg-px), 100% var(--mg-px), 100% calc(100% - var(--mg-px)), calc(100% - var(--mg-px)) calc(100% - var(--mg-px)), calc(100% - var(--mg-px)) 100%, var(--mg-px) 100%, var(--mg-px) calc(100% - var(--mg-px)), 0 calc(100% - var(--mg-px)));   /* a rectangle with its corners notched */
   position:relative; width:100%; height:100%; min-height:300px; overflow:hidden; background:var(--mg-bg);
   display:flex; flex-direction:column; color:var(--mg-fg); font:var(--mg-size-base)/1.3 var(--mg-font); text-align:center;
@@ -74,9 +75,9 @@
 #mg-name-rev2 { color:var(--mg-pad-fill); z-index:2; }   /* the inverse: shows through lit pads, so the word is never lost */
 #mg-bankbar { display:flex; align-items:center; gap:.25em; flex:1 1 auto; min-width:0; }   /* gives way to the nav, never the other way round */
 #memgame #mg-bankbar .mg-icon { padding:.4em .5em; margin-left:-.5em; }
-#mg-bankdisplay { position:relative; top:calc(var(--mg-x-ty, 0) * 1em); font-size:var(--mg-size-bank); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }   /* a long bank name is cut with an ellipsis, so the nav stays on the same row */
+#mg-bankdisplay { position:relative; top:var(--mg-ty, 0px); font-size:var(--mg-size-bank); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }   /* a long bank name is cut with an ellipsis, so the nav stays on the same row */
 #mg-nav { display:flex; flex:none; flex-wrap:nowrap; justify-content:flex-end; gap:.5em; text-align:right; }
-#memgame .mg-link { white-space:nowrap; border:0; padding:calc(.4em + var(--mg-x-ty, 0) * 1em) 1em calc(.4em - var(--mg-x-ty, 0) * 1em); font:inherit; font-size:var(--mg-size-nav); line-height:1.2; color:var(--mg-bg); cursor:pointer; text-decoration:none; }
+#memgame .mg-link { white-space:nowrap; border:0; padding:calc(.4em + var(--mg-ty, 0px)) 1em calc(.4em - var(--mg-ty, 0px)); font:inherit; font-size:var(--mg-size-nav); line-height:1.2; color:var(--mg-bg); cursor:pointer; text-decoration:none; }
 #memgame dialog { --mg-sheet-gap:24px;   /* how far short of the top of the screen the card stops */
   position:fixed; inset:auto 0 0 0; margin:0; padding:0; border:0;
   width:100%; max-width:none; height:calc(100vh - var(--mg-sheet-gap) - env(safe-area-inset-top,0px)); height:calc(100dvh - var(--mg-sheet-gap) - env(safe-area-inset-top,0px));
@@ -101,7 +102,7 @@
 @keyframes mg-drift { 0%,100% { transform:translate(0,0); } 33% { transform:translate(var(--dx1),var(--dy1)); } 66% { transform:translate(var(--dx2),var(--dy2)); } }
 #mg-playgroup { position:absolute; display:flex; align-items:center; gap:12px; transition:left .8s steps(10), top .8s steps(10); will-change:transform; animation:mg-drift var(--dur,9s) steps(1, end) infinite; }
 .mg-msgslot { width:var(--mg-msg-slot, 10em); }   /* room kept for the widest message, so the play group's size never changes */
-#mg-playgroup p { width:max-content; max-width:100%; box-sizing:border-box; padding:calc(.4em + var(--mg-x-ty, 0) * 1em) 1em calc(.4em - var(--mg-x-ty, 0) * 1em); color:var(--mg-bg); font-size:var(--mg-size-message); line-height:1.2; text-align:center; white-space:nowrap; }
+#mg-playgroup p { width:max-content; max-width:100%; box-sizing:border-box; padding:calc(.4em + var(--mg-ty, 0px)) 1em calc(.4em - var(--mg-ty, 0px)); color:var(--mg-bg); font-size:var(--mg-size-message); line-height:1.2; text-align:center; white-space:nowrap; }
 #mg-play { position:relative; flex:none; width:var(--size,96px); height:var(--size,96px); border:0; border-radius:50%; padding:0; cursor:pointer;
   background:none; color:var(--mg-bg); display:flex; align-items:center; justify-content:center; isolation:isolate; }   /* the reel is the circle */
 #mg-play:disabled { cursor:default; }   /* no fade while it plays: the reel turns instead */
@@ -125,7 +126,7 @@
 @media (prefers-reduced-motion: reduce) { #memgame .mg-pad, #memgame .mg-shadow, #mg-playgroup, #mg-play .mg-reel { animation:none; } }
 /* ---- game mode: the nav and the central text step aside, the game bar appears ---- */
 #memgame.mg-ingame #mg-nav, #memgame.mg-ingame .mg-namewrap { display:none; }
-#mg-round { position:relative; top:calc(var(--mg-x-ty, 0) * 1em); font-size:var(--mg-size-round); line-height:1.3; white-space:nowrap; text-align:center; pointer-events:none; }
+#mg-round { position:relative; top:var(--mg-ty, 0px); font-size:var(--mg-size-round); line-height:1.3; white-space:nowrap; text-align:center; pointer-events:none; }
 /* ---- the wipe: a dithered overlay that sweeps across the screen, left to right ---- */
 #mg-wipe { display:none; position:absolute; inset:0; z-index:20; align-items:center; justify-content:center; color:var(--mg-fg); }   /* the overlay is drawn by the script, as dithered cells */
 #mg-wipe-text { color:var(--mg-bg); font-family:var(--mg-font); font-size:var(--mg-size-h1); font-weight:var(--mg-weight-h1); line-height:1.1; text-align:center; }
@@ -138,8 +139,8 @@
 #mg-keys .mg-keyrow { position:relative; width:calc(7 * var(--mg-key-size) + 6 * var(--mg-key-gap)); height:var(--mg-key-size); }
 #mg-keys .mg-key { position:absolute; top:0; box-sizing:border-box; width:var(--mg-key-size); height:var(--mg-key-size); border-radius:0; clip-path:var(--mg-key-clip); isolation:isolate;
   display:flex; align-items:center; justify-content:center; font-family:var(--mg-font); font-size:calc(var(--mg-key-size) * .4); font-weight:var(--mg-weight-key); line-height:1;
-  padding-top:max(0px, calc(var(--mg-cap-ty, 0) * 2em)); padding-bottom:max(0px, calc(var(--mg-cap-ty, 0) * -2em));   /* the capital centred in the circle, by the font's real metrics */
-  padding-left:max(0px, calc(var(--mg-gx, 0) * 2em)); padding-right:max(0px, calc(var(--mg-gx, 0) * -2em)); }
+  padding-top:max(0px, calc((var(--mg-gy, 0px) + var(--mg-label-nudge-y)) * 2)); padding-bottom:max(0px, calc((var(--mg-gy, 0px) + var(--mg-label-nudge-y)) * -2));   /* the capital's ink centred in the circle: the script measures the offset (--mg-gy down, --mg-gx right) */
+  padding-left:max(0px, calc((var(--mg-gx, 0px) + var(--mg-label-nudge-x)) * 2)); padding-right:max(0px, calc((var(--mg-gx, 0px) + var(--mg-label-nudge-x)) * -2)); }
 #mg-keys .mg-white { left:calc(var(--x) * (var(--mg-key-size) + var(--mg-key-gap))); background:var(--mg-fg); color:var(--mg-bg); }
 #mg-keys .mg-black { left:calc(var(--x) * (var(--mg-key-size) + var(--mg-key-gap)) - var(--mg-key-gap) / 2 - var(--mg-key-size) / 2);
   background:var(--mg-fg); color:var(--mg-fg); }   /* the ring is the key's own fill; ::before draws the inner circle over it, so the outline is whole */
@@ -172,7 +173,7 @@
 /* Lit: the whole pad flips to the background colour and drops one cell onto its shadow, like a pressed button.
    Released: it dithers back in through three levels. */
 #memgame .mg-pad::before { content: ''; position: absolute; inset: 0; clip-path: var(--mg-pad-clip); background: var(--mg-pad-lit-fill); visibility: hidden; pointer-events: none; }
-#memgame .mg-pad::after { position: relative; z-index: 1; top: calc(var(--mg-cap-ty, 0) * 1em); left: calc(var(--mg-gx, 0) * 1em); }   /* the label's capitals centred in the pad, by the font's real metrics */
+#memgame .mg-pad::after { position: relative; z-index: 1; top: calc(var(--mg-gy, 0px) + var(--mg-label-nudge-y)); left: calc(var(--mg-gx, 0px) + var(--mg-label-nudge-x)); }   /* the label's ink centred in the pad: the script measures the offset */
 #memgame .mg-pad.mg-lit::before { visibility: visible; }
 #memgame .mg-pad.mg-rel::before { visibility: visible; -webkit-mask: var(--mg-rel) 0 0 / var(--mg-tile) var(--mg-tile); mask: var(--mg-rel) 0 0 / var(--mg-tile) var(--mg-tile); }
 #memgame .mg-pad.mg-hi { color: var(--mg-pad-fill); }
@@ -192,7 +193,7 @@
 #memgame .mg-link::before, #mg-playgroup p::before, #mg-bottom::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--mg-fg); clip-path: var(--mg-notch); pointer-events: none;
   translate: var(--mg-px) var(--mg-px); -webkit-mask: var(--mg-shadow-dither) 0 0 / var(--mg-tile) var(--mg-tile); mask: var(--mg-shadow-dither) 0 0 / var(--mg-tile) var(--mg-tile); }
 #mg-wipe-canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; }
-#mg-wipe-text { position: relative; isolation: isolate; padding: calc(.3em + var(--mg-x-ty, 0) * 1em) 1em calc(.3em - var(--mg-x-ty, 0) * 1em); background: var(--mg-bg); clip-path: var(--mg-notch); }   /* the pill's border: this fill, with the inner pill drawn over it */
+#mg-wipe-text { position: relative; isolation: isolate; padding: calc(.3em + var(--mg-ty, 0px)) 1em calc(.3em - var(--mg-ty, 0px)); background: var(--mg-bg); clip-path: var(--mg-notch); }   /* the pill's border: this fill, with the inner pill drawn over it */
 #mg-wipe-text::before { content: ''; position: absolute; inset: var(--mg-px); z-index: -1; background: var(--mg-fg); clip-path: var(--mg-notch); }
 #memgame.mg-ingame #mg-keys { display: none; }   /* no keyboard reference during a game: the keys are on the pads */
 #mg-keys .mg-black::before { content: ''; position: absolute; inset: calc(var(--mg-key-size) / var(--mg-key-cells, 14)); z-index: -1; clip-path: var(--mg-key-inner-clip); background: var(--mg-bg); }
@@ -727,23 +728,75 @@
   const padSizes = {};   // pad size per window size: it stays the same on a bank swap or a new round
 
   // ---- letters centred in their shapes ----
-  // A font's letters rarely sit in the middle of the line they are laid out in. Once the real font is in, measure it, then nudge capitals
-  // (key and pad labels) so their cap height is centred, and lowercase (the pills) so the x-height is. The css reads --mg-cap-ty and --mg-x-ty
-  // (em, down is positive) and each label's --mg-gx (em, right is positive: centres the ink, not the advance width, so a letter's side gaps balance).
-  let glyphMetrics = { cap: 0, x: 0 }, glyphCtx = null;
-  function centreGlyphs() {
+  // A browser places text by the font's line metrics, which rarely put a letter's ink in the middle of its line (and round them at every size).
+  // So this measures what is really drawn, at each real size: where the browser puts the baseline (a zero-size probe sits right on it) and
+  // how tall the ink is (the canvas reports the letter outlines' bounds). Each label then moves, in whole device pixels, so its ink is central.
+  // The css reads the result: --mg-gy and --mg-gx on key and pad labels (capitals; down and right are positive), --mg-ty on the pills' lowercase text.
+  const PILL_TEXT = '.mg-link, #mg-playgroup p, #mg-wipe-text, #mg-round, #mg-bankdisplay';
+  const glyphSizes = {}, inkShifts = {};   // font size -> what the browser really does at that size; letter + size -> how far its drawn ink sits from the middle of its advance
+  let glyphCtx = null, glyphRaster = null;
+  function glyphsAt(fs) {
+    const id = String(Math.round(fs * 100));
+    if (glyphSizes[id]) return glyphSizes[id];
+    const fam = getComputedStyle(gameRoot).fontFamily, c = glyphCtx || (glyphCtx = document.createElement('canvas').getContext('2d'));
+    c.font = '400 ' + fs + 'px ' + fam; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:absolute;left:0;top:0;visibility:hidden;pointer-events:none;white-space:nowrap;font:400 ' + fs + 'px/1 ' + fam;
+    probe.innerHTML = '<span>H</span><span style="display:inline-block;width:0;height:0"></span>';
+    gameRoot.appendChild(probe);
+    const box = probe.getBoundingClientRect(), text = probe.firstChild.getBoundingClientRect(), baseY = probe.lastChild.getBoundingClientRect().bottom;
+    probe.remove();
+    return glyphSizes[id] = {
+      base: baseY - box.top,                              // the baseline, down from the top of a line one em tall
+      toMid: baseY - (text.top + text.bottom) / 2,        // ...and down from the middle of the text's own box (what a Range reports)
+      cap: c.measureText('H').actualBoundingBoxAscent,    // the ink's real height: capitals...
+      x: c.measureText('x').actualBoundingBoxAscent       // ...and lowercase
+    };
+  }
+
+  function inkShift(ch, fs, family, outline) {   // css px to move a letter right so its drawn ink is centred on its advance (side gaps in a pixel font are rarely even)
+    const dpr = window.devicePixelRatio || 1, id = ch + '|' + fs.toFixed(2) + '|' + dpr;
+    if (id in inkShifts) return inkShifts[id];
+    let out = outline;   // the outline bounds, if drawing the letter and reading the pixels back doesn't work
     try {
-      const c = glyphCtx || (glyphCtx = document.createElement('canvas').getContext('2d')), S = 200;
-      c.font = '400 ' + S + 'px ' + getComputedStyle(gameRoot).fontFamily; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
-      const H = c.measureText('H');
-      if (H.fontBoundingBoxAscent === undefined) return;   // an old browser: the font's plain metrics stay
-      const ty = h => (h - H.fontBoundingBoxAscent + H.fontBoundingBoxDescent) / S / 2;   // how far down a glyph of height h must move to be centred in its line
-      glyphMetrics = { cap: ty(H.actualBoundingBoxAscent), x: ty(c.measureText('x').actualBoundingBoxAscent) };
-      gameRoot.style.setProperty('--mg-cap-ty', glyphMetrics.cap.toFixed(4));
-      gameRoot.style.setProperty('--mg-x-ty', glyphMetrics.x.toFixed(4));
-      const gx = el => { const ch = (el.dataset.key || '').toUpperCase(); if (!ch) return; const m = c.measureText(ch); el.style.setProperty('--mg-gx', ((m.width - (m.actualBoundingBoxRight - m.actualBoundingBoxLeft)) / 2 / S).toFixed(4)); };
-      pads.forEach(gx);
-      gameRoot.querySelectorAll('#mg-keys .mg-key').forEach(gx);
+      const size = fs * dpr, c0 = glyphCtx;
+      c0.font = '400 ' + size + 'px ' + family;
+      const adv = c0.measureText(ch).width, gap = Math.ceil(size), w = Math.ceil(adv) + 2 * gap, h = Math.ceil(size * 2);
+      const cv = glyphRaster || (glyphRaster = document.createElement('canvas'));
+      cv.width = w; cv.height = h;
+      const c = cv.getContext('2d', { willReadFrequently: true });
+      c.font = '400 ' + size + 'px ' + family; c.textAlign = 'left'; c.textBaseline = 'alphabetic'; c.fillStyle = '#000';
+      c.fillText(ch, gap, Math.round(size * 1.4));
+      const px = c.getImageData(0, 0, w, h).data;
+      let lo = w, hi = -1;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (px[(y * w + x) * 4 + 3] >= 128 && (x < lo || x > hi)) { if (x < lo) lo = x; if (x > hi) hi = x; }
+      if (hi >= 0) out = (adv / 2 - ((lo - gap) + (hi + 1 - gap)) / 2) / dpr;
+    } catch (e) { /* the outline measure stands */ }
+    return inkShifts[id] = out;
+  }
+
+  function centreGlyphs(refont) {
+    try {
+      if (refont) { for (const k in glyphSizes) delete glyphSizes[k]; for (const k in inkShifts) delete inkShifts[k]; }   // the real font has arrived: measure again
+      const dpr = window.devicePixelRatio || 1, snap = v => (Math.round(v * dpr) / dpr) + 'px';
+      const fontPx = (el, pseudo) => parseFloat(getComputedStyle(el, pseudo || null).fontSize);
+      const family = getComputedStyle(gameRoot).fontFamily;
+      const capital = (el, fs) => {     // a capital inside a shape: centre its ink both ways
+        const ch = (el.dataset.key || el.textContent || '').trim().toUpperCase();
+        if (!ch || !(fs > 0)) return;
+        const g = glyphsAt(fs), c = glyphCtx;
+        c.font = '400 ' + fs + 'px ' + family;
+        const m = c.measureText(ch);
+        el.style.setProperty('--mg-gy', snap(fs / 2 - (g.base - g.cap / 2)));
+        el.style.setProperty('--mg-gx', snap(inkShift(ch, fs, family, (m.width - (m.actualBoundingBoxRight - m.actualBoundingBoxLeft)) / 2)));   // the ink's centre onto the advance's centre
+      };
+      pads.forEach(p => capital(p, fontPx(p, '::after') || parseFloat(p.style.getPropertyValue('--size')) * 0.15));
+      gameRoot.querySelectorAll('#mg-keys .mg-key').forEach(k => capital(k, fontPx(k)));
+      gameRoot.querySelectorAll(PILL_TEXT).forEach(el => {   // lowercase text in a pill: centre the x-height
+        const fs = fontPx(el); if (!(fs > 0)) return;
+        const g = glyphsAt(fs);
+        el.style.setProperty('--mg-ty', snap(fs / 2 - (g.base - g.x / 2)));
+      });
     } catch (e) { /* the letters stay where the font puts them */ }
   }
 
@@ -756,13 +809,13 @@
       want = mid(tap.querySelector('svg').getBoundingClientRect()); have = mid(ig.querySelector('svg').getBoundingClientRect());
     } else if (key && key.getBoundingClientRect().width && document.createRange) {   // desktop: the link's letters on the same centre line as a bottom-row key's letter
       const text = node => { const rg = document.createRange(); rg.selectNodeContents(node); return rg.getBoundingClientRect ? mid(rg.getBoundingClientRect()) : NaN; };
-      want = mid(key.getBoundingClientRect()); have = text(ig.firstChild) - glyphMetrics.x * parseFloat(getComputedStyle(ig).fontSize);   // the key circle's centre, and the link's x-height centre
+      want = mid(key.getBoundingClientRect()); have = text(ig.firstChild) + glyphsAt(parseFloat(getComputedStyle(ig).fontSize)).toMid - glyphsAt(parseFloat(getComputedStyle(ig).fontSize)).x / 2;   // the key circle's centre, and the centre of the link's x-height
     }
     if (want == null || have == null || isNaN(want) || isNaN(have) || Math.abs(have - want) < 0.5) return;
     ig.style.bottom = (gameRoot.getBoundingClientRect().bottom - ig.getBoundingClientRect().bottom + (have - want)) + 'px';   // bottom is measured up from the screen's edge
   }
   if (document.fonts) {   // letter positions change once the real font is in
-    const fontIn = () => { centreGlyphs(); alignLink(); };
+    const fontIn = () => { centreGlyphs(true); alignLink(); };
     document.fonts.ready.then(fontIn);
     if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', fontIn);   // the font can arrive after 'ready' (a slow stylesheet)
   }
@@ -835,6 +888,7 @@
       p.style.left = Math.round(spots.pts[i].x) + 'px'; p.style.top = Math.round(spots.pts[i].y) + 'px';
       setDrift(p); syncShadow(p);
     });
+    centreGlyphs();   // the pad labels' size follows the pad's
   }
 
   function syncShadow(p) {    // the shadow copies the pad's spot and drift, so the two move as one
@@ -1195,6 +1249,7 @@
     clearTimeout(relayoutTimer);
     relayoutTimer = setTimeout(() => {
       lastW = stageEl.clientWidth; lastH = stageEl.clientHeight;
+      centreGlyphs();   // text sizes can follow the screen's size
       if (state === 'idle' || state === 'ready') scatterPads();
     }, 120);
   };
