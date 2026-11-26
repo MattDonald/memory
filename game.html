@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-<!-- 1-BIT VERSION, first pass: two tones, pixel-stepped shapes and motion, pixel font. The smooth version is memory-game-readymag.html.
+<!-- 1-BIT: two tones, pixel-stepped shapes and motion, pixel font.
      HOMEPAGE for a Readymag Code widget: paste all of this into the Widget code box.
      It is the whole page (name, game, popups), so dark mode covers everything.
      EDIT: the about / how to play popup texts (bottom of the markup),
@@ -10,15 +10,15 @@
      FULLSCREEN (top of the script) = true: covers the whole screen, whatever size the widget is. Put the widget on its own page.
      Colours (set once, in the PALETTE block at the top of the stylesheet): light = orange background, off-white everything else, the inverse colour where a pad covers the name. Dark = off-black background, orange text and icons, pads as in light. Dark mode follows the device. -->
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tiny5&display=swap">
 <style>
 /* ============================== TYPOGRAPHY ==============================
    Set your fonts and sizes here. The rest of the stylesheet reads from these.
    To use a custom font, load it first (an @font-face, or a <link>, above this <style>), then name it below.
    Sizes in em are relative to --mg-size-base. */
 #memgame {
-  --mg-font: system-ui, sans-serif;        /* the font for everything */
-  --mg-font-name: var(--mg-font);          /* a different font just for the name (mattdonald): see the NAME FONT note in the 1-bit block */
+  --mg-font: 'Tiny5', 'Courier New', monospace;   /* the font for everything (Tiny5 is loaded by the <link> at the top) */
+  --mg-font-name: var(--mg-font);          /* a different font just for the name (mattdonald): see the NAME FONT note below */
   --mg-size-base: 16px;                    /* base size: every em size below is relative to this */
   --mg-size-h1: clamp(1.5em, 7vw, 3em);    /* h1: mattdonald */
   --mg-size-h2: 1em;                       /* h2: always creating */
@@ -30,9 +30,7 @@
   --mg-msg-slot: 10em;                     /* room reserved for the message pill: at least the width of the longest message */
   --mg-size-round: var(--mg-size-nav);     /* 'round 2/3' during a game */
   --mg-size-close: 1.6em;                  /* the x that closes a sheet */
-  --mg-size-key: .8em;                     /* the letters on the keyboard reference */
-  --mg-weight-key: 600;
-  --mg-weight-h1: 600; --mg-weight-h2: 400; --mg-weight-h3: 600;
+  --mg-weight-key: 400; --mg-weight-h1: 400; --mg-weight-h2: 400; --mg-weight-h3: 400;   /* Tiny5 has one weight, regular: asking for bold would make the browser fake one */
 }
 /* ========================================================================= */
 #memgame {
@@ -43,11 +41,17 @@
   color-scheme:light dark;
   --mg-fg:light-dark(var(--mg-offwhite), var(--mg-orange));   /* text and icons */
   --mg-bg:light-dark(var(--mg-orange), var(--mg-black));      /* background, and the text on pills, the wipe and the play icon */
-  /* PADS: the same in both themes. The name shows through a pad in the opposite colour. */
-  --mg-pad-fill:var(--mg-offwhite); --mg-pad-lit-fill:var(--mg-orange); --mg-pad-opacity:1; --mg-pad-lit-filter:none;
+  /* PADS: each theme is exactly two colours. A pad is the text colour and flips to the background colour when lit; the name shows through a pad in the opposite colour. */
+  --mg-pad-fill:var(--mg-fg); --mg-pad-lit-fill:var(--mg-bg);
+  --mg-px:4px;                                          /* chunk size for the small things (pill corners); pads are drawn on a 20-cell grid by the script */
+  --mg-icon-size:35px;                                  /* every icon's box: the buttons, lives, legend, play and tap icons */
+  --mg-tile:calc(4 * var(--mg-dpx, 2px));               /* one 4x4 Bayer dither tile; --mg-dpx (one dither dot) is set by the script from BLOCKS */
+  --mg-count-size:100vh;                                /* the count-in numeral */
+  --mg-notch:polygon(0 var(--mg-px), var(--mg-px) var(--mg-px), var(--mg-px) 0, calc(100% - var(--mg-px)) 0, calc(100% - var(--mg-px)) var(--mg-px), 100% var(--mg-px), 100% calc(100% - var(--mg-px)), calc(100% - var(--mg-px)) calc(100% - var(--mg-px)), calc(100% - var(--mg-px)) 100%, var(--mg-px) 100%, var(--mg-px) calc(100% - var(--mg-px)), 0 calc(100% - var(--mg-px)));   /* a rectangle with its corners notched */
   position:relative; width:100%; height:100%; min-height:300px; overflow:hidden; background:var(--mg-bg);
   display:flex; flex-direction:column; color:var(--mg-fg); font:var(--mg-size-base)/1.3 var(--mg-font); text-align:center;
-  -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
+  -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; touch-action:manipulation;
+  font-weight:400; font-synthesis:none; -webkit-font-smoothing:none; font-smooth:never; text-rendering:optimizeSpeed; isolation:isolate; }
 #memgame[data-theme="light"] { color-scheme:light; }
 #memgame[data-theme="dark"] { color-scheme:dark; }
 #memgame.mg-full { position:fixed; left:0; top:0; width:100vw; height:100vh; height:100dvh; min-height:0; z-index:2147483000;
@@ -56,7 +60,7 @@
 #memgame, #memgame * { box-sizing:border-box; }
 #memgame button { font:inherit; margin:0; -webkit-appearance:none; appearance:none; }
 #memgame p { margin:0; }
-#memgame svg { fill:currentColor; }
+#memgame svg { fill:currentColor; shape-rendering:crispEdges; }
 #mg-stage { position:relative; flex:1; min-height:0; }
 #mg-pads { position:absolute; inset:0; }
 #mg-top { display:flex; flex-wrap:nowrap; justify-content:space-between; align-items:center; gap:1em; padding:.75em 1em 0; text-align:left; }
@@ -69,23 +73,23 @@
 #mg-name-rev { color:var(--mg-pad-lit-fill); z-index:2; }
 #mg-name-rev2 { color:var(--mg-pad-fill); z-index:2; }   /* the inverse: shows through lit pads, so the word is never lost */
 #mg-bankbar { display:flex; align-items:center; gap:.25em; flex:1 1 auto; min-width:0; }   /* gives way to the nav, never the other way round */
-#memgame #mg-bankbar .mg-icon { padding:.4em .5em; }
-#mg-bankdisplay { font-size:var(--mg-size-bank); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }   /* a long bank name is cut with an ellipsis, so the nav stays on the same row */
+#memgame #mg-bankbar .mg-icon { padding:.4em .5em; margin-left:-.5em; }
+#mg-bankdisplay { position:relative; top:calc(var(--mg-x-ty, 0) * 1em); font-size:var(--mg-size-bank); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }   /* a long bank name is cut with an ellipsis, so the nav stays on the same row */
 #mg-nav { display:flex; flex:none; flex-wrap:nowrap; justify-content:flex-end; gap:.5em; text-align:right; }
-#memgame .mg-link { white-space:nowrap; background:var(--mg-offwhite); border:0; border-radius:999px; padding:.4em 1em; font:inherit; font-size:var(--mg-size-nav); line-height:1.2; color:var(--mg-bg); cursor:pointer; text-decoration:none; }
+#memgame .mg-link { white-space:nowrap; border:0; padding:calc(.4em + var(--mg-x-ty, 0) * 1em) 1em calc(.4em - var(--mg-x-ty, 0) * 1em); font:inherit; font-size:var(--mg-size-nav); line-height:1.2; color:var(--mg-bg); cursor:pointer; text-decoration:none; }
 #memgame dialog { --mg-sheet-gap:24px;   /* how far short of the top of the screen the card stops */
-  position:fixed; inset:auto 0 0 0; margin:0; padding:0; border:0; border-radius:16px 16px 0 0;
+  position:fixed; inset:auto 0 0 0; margin:0; padding:0; border:0;
   width:100%; max-width:none; height:calc(100vh - var(--mg-sheet-gap) - env(safe-area-inset-top,0px)); height:calc(100dvh - var(--mg-sheet-gap) - env(safe-area-inset-top,0px));
   max-height:none; overflow:hidden;
   background:var(--mg-fg); color:var(--mg-bg);   /* the card is the page colours swapped */
   text-align:left; font:inherit; -webkit-user-select:text; user-select:text; touch-action:none;
-  transform:translateY(100%); transition:transform .3s ease; }
+  transform:translateY(100%); transition:transform .3s steps(6); }
 #memgame dialog[open] { display:flex; flex-direction:column; }
 #memgame dialog.mg-open { transform:translateY(calc(100% - 33.34vh)); transform:translateY(calc(100% - 33.34dvh)); }   /* opens with the bottom third showing */
 #memgame dialog::backdrop { background:transparent; }
 #memgame dialog:focus { outline:none; }   /* the card itself holds focus when it opens, so no ring around the x */
 #memgame .mg-grab { flex:none; position:relative; width:100%; height:26px; }
-#memgame .mg-grab::before { content:''; position:absolute; left:50%; top:10px; width:40px; height:4px; margin-left:-20px; border-radius:2px; background:currentColor; }
+#memgame .mg-grab::before { content:''; position:absolute; left:50%; top:10px; width:40px; height:4px; margin-left:-20px; background:currentColor; }
 #memgame .mg-dlg-body { font-size:var(--mg-size-sheet); flex:1; min-height:0; overflow-y:auto; scrollbar-width:none; overscroll-behavior:contain; touch-action:none;   /* the script moves the card and the text together */
   padding:.75em 1.5em calc(1.5em + env(safe-area-inset-bottom,0px)); }
 #memgame .mg-dlg-body::-webkit-scrollbar { display:none; }
@@ -95,66 +99,66 @@
 #memgame .mg-close { position:absolute; top:.6em; right:.8em; background:none; border:0; color:inherit; font-size:var(--mg-size-close); line-height:1; cursor:pointer; padding:.1em .3em; }
 #memgame .mg-ico svg { height:var(--mg-icon-size, 35px); width:var(--mg-icon-size, 35px); vertical-align:-12px; margin-right:.2em; }
 @keyframes mg-drift { 0%,100% { transform:translate(0,0); } 33% { transform:translate(var(--dx1),var(--dy1)); } 66% { transform:translate(var(--dx2),var(--dy2)); } }
-#mg-playgroup { position:absolute; display:flex; align-items:center; gap:12px; transition:left .8s ease, top .8s ease; will-change:transform; animation:mg-drift var(--dur,9s) ease-in-out infinite; }
+#mg-playgroup { position:absolute; display:flex; align-items:center; gap:12px; transition:left .8s steps(10), top .8s steps(10); will-change:transform; animation:mg-drift var(--dur,9s) steps(1, end) infinite; }
 .mg-msgslot { width:var(--mg-msg-slot, 10em); }   /* room kept for the widest message, so the play group's size never changes */
-#mg-playgroup p { width:max-content; max-width:100%; box-sizing:border-box; padding:.4em 1em; border-radius:999px; background:var(--mg-offwhite); color:var(--mg-bg); font-size:var(--mg-size-message); line-height:1.2; text-align:center; white-space:nowrap; }
+#mg-playgroup p { width:max-content; max-width:100%; box-sizing:border-box; padding:calc(.4em + var(--mg-x-ty, 0) * 1em) 1em calc(.4em - var(--mg-x-ty, 0) * 1em); color:var(--mg-bg); font-size:var(--mg-size-message); line-height:1.2; text-align:center; white-space:nowrap; }
 #mg-play { position:relative; flex:none; width:var(--size,96px); height:var(--size,96px); border:0; border-radius:50%; padding:0; cursor:pointer;
-  background:none; color:var(--mg-bg); display:flex; align-items:center; justify-content:center; }   /* the reel is the circle */
+  background:none; color:var(--mg-bg); display:flex; align-items:center; justify-content:center; isolation:isolate; }   /* the reel is the circle */
 #mg-play:disabled { cursor:default; }   /* no fade while it plays: the reel turns instead */
-#mg-play .mg-reel { position:absolute; inset:0; width:100%; height:100%; fill:var(--mg-offwhite);
-  --mg-reel-speed:2s;   /* time for one full turn */
-  animation:mg-spin var(--mg-reel-speed) linear infinite; animation-play-state:paused; }
+#mg-play .mg-reel { position:absolute; inset:0; width:100%; height:100%; fill:var(--mg-fg); clip-path:var(--mg-pad-clip);
+  --mg-reel-speed:2s;   /* time for one full turn, in 12 steps */
+  animation:mg-spin var(--mg-reel-speed) steps(12) infinite; animation-play-state:paused; }
 #mg-play.mg-spinning .mg-reel { animation-play-state:running; }   /* turns while the pattern plays; stops where it is, and carries on from there next time */
 #mg-play .mg-playicon { position:relative; height:var(--mg-icon-size, 35px); width:var(--mg-icon-size, 35px); display:block; }   /* the triangle is already optically centred in its square */
 @keyframes mg-spin { to { transform:rotate(360deg); } }
-#memgame .mg-pad { position:absolute; width:var(--size,96px); height:var(--size,96px); border-radius:50%; padding:0; cursor:pointer;
-  background:var(--mg-pad-fill); border:0; opacity:var(--mg-pad-opacity,.85);
-  transition:left .8s ease, top .8s ease, background-color var(--mg-fade,.5s) ease, color var(--mg-fade,.5s) ease;   /* the fade back after a trigger; --mg-fade sets its length */
-  will-change:transform; animation:mg-drift var(--dur,9s) ease-in-out infinite; }
-#memgame .mg-pad.mg-lit { transition:none; opacity:1;   /* instant on, then the normal transition fades it back */ filter:var(--mg-pad-lit-filter, brightness(1.4)); background:var(--mg-pad-lit-fill); }
+#memgame .mg-pad { position:absolute; width:var(--size,96px); height:var(--size,96px); border-radius:0; clip-path:var(--mg-pad-clip); padding:0; cursor:pointer;
+  background:var(--mg-pad-fill); border:0;
+  transition:left .8s steps(10), top .8s steps(10);   /* hops between whole-pixel spots, no smooth fade */
+  will-change:transform; animation:mg-drift var(--dur,9s) steps(1, end) infinite; }
+#memgame .mg-pad.mg-lit { transition:none; background:var(--mg-pad-lit-fill); }
 #memgame .mg-pad:disabled { cursor:default; }
 /* the key that triggers each pad, centred on it: game mode only, and only where the keyboard reference shows (hidden on touch screens below) */
 #memgame .mg-pad { display:flex; align-items:center; justify-content:center; user-select:none; -webkit-user-select:none; color:var(--mg-pad-lit-fill); }
 #memgame .mg-pad.mg-lit { color:var(--mg-pad-fill); }
 #memgame .mg-pad::after { content:none; pointer-events:none; font-family:var(--mg-font); font-weight:var(--mg-weight-key); font-size:calc(var(--size, 96px) * .15); line-height:1; }
 #memgame.mg-ingame .mg-pad::after { content:attr(data-key); }
-@media (prefers-reduced-motion: reduce) { #memgame .mg-pad, #mg-playgroup, #mg-play .mg-reel { animation:none; } }
+@media (prefers-reduced-motion: reduce) { #memgame .mg-pad, #memgame .mg-shadow, #mg-playgroup, #mg-play .mg-reel { animation:none; } }
 /* ---- game mode: the nav and the central text step aside, the game bar appears ---- */
 #memgame.mg-ingame #mg-nav, #memgame.mg-ingame .mg-namewrap { display:none; }
-#mg-round { font-size:var(--mg-size-round); line-height:1.3; white-space:nowrap; text-align:center; pointer-events:none; }
-/* ---- the wipe: an off-white overlay that sweeps across the screen, left to right ---- */
-#mg-wipe { display:none; position:absolute; inset:0; z-index:20; align-items:center; justify-content:center; background:var(--mg-offwhite); }
-#mg-wipe-text { color:var(--mg-bg); font-family:var(--mg-font); font-size:var(--mg-size-h1); font-weight:var(--mg-weight-h1); line-height:1.1; text-align:center; padding:0 1em; }
+#mg-round { position:relative; top:calc(var(--mg-x-ty, 0) * 1em); font-size:var(--mg-size-round); line-height:1.3; white-space:nowrap; text-align:center; pointer-events:none; }
+/* ---- the wipe: a dithered overlay that sweeps across the screen, left to right ---- */
+#mg-wipe { display:none; position:absolute; inset:0; z-index:20; align-items:center; justify-content:center; color:var(--mg-fg); }   /* the overlay is drawn by the script, as dithered cells */
+#mg-wipe-text { color:var(--mg-bg); font-family:var(--mg-font); font-size:var(--mg-size-h1); font-weight:var(--mg-weight-h1); line-height:1.1; text-align:center; }
 
 /* ---- keyboard reference: circles, desktop only (not touch screens), not clickable ---- */
-#mg-keys { --mg-key-size:30px; --mg-key-gap:4px; --mg-key-dim:.3;   /* circle size, space between circles, opacity of keys with no pad */
+#mg-keys { --mg-key-size:30px; --mg-key-gap:4px;   /* circle size, space between circles */
   display:flex; flex-direction:column; gap:var(--mg-key-gap); position:absolute; left:50%; bottom:calc(1em + env(safe-area-inset-bottom,0px));
   transform:translateX(-50%); z-index:1; pointer-events:none; }
 @media (hover: none) and (pointer: coarse) { #mg-keys, #memgame .mg-pad::after { display:none; } }   /* hidden on touch screens, shown at any desktop window size */
 #mg-keys .mg-keyrow { position:relative; width:calc(7 * var(--mg-key-size) + 6 * var(--mg-key-gap)); height:var(--mg-key-size); }
-#mg-keys .mg-key { position:absolute; top:0; box-sizing:border-box; width:var(--mg-key-size); height:var(--mg-key-size); border-radius:50%;
-  display:flex; align-items:center; justify-content:center; font-family:var(--mg-font); font-size:var(--mg-size-key); font-weight:var(--mg-weight-key); line-height:1; transition:none; }
-#mg-keys .mg-white { left:calc(var(--x) * (var(--mg-key-size) + var(--mg-key-gap))); background:var(--mg-offwhite); color:var(--mg-orange); }
+#mg-keys .mg-key { position:absolute; top:0; box-sizing:border-box; width:var(--mg-key-size); height:var(--mg-key-size); border-radius:0; clip-path:var(--mg-key-clip); isolation:isolate;
+  display:flex; align-items:center; justify-content:center; font-family:var(--mg-font); font-size:calc(var(--mg-key-size) * .4); font-weight:var(--mg-weight-key); line-height:1;
+  padding-top:max(0px, calc(var(--mg-cap-ty, 0) * 2em)); padding-bottom:max(0px, calc(var(--mg-cap-ty, 0) * -2em));   /* the capital centred in the circle, by the font's real metrics */
+  padding-left:max(0px, calc(var(--mg-gx, 0) * 2em)); padding-right:max(0px, calc(var(--mg-gx, 0) * -2em)); }
+#mg-keys .mg-white { left:calc(var(--x) * (var(--mg-key-size) + var(--mg-key-gap))); background:var(--mg-fg); color:var(--mg-bg); }
 #mg-keys .mg-black { left:calc(var(--x) * (var(--mg-key-size) + var(--mg-key-gap)) - var(--mg-key-gap) / 2 - var(--mg-key-size) / 2);
-  background:var(--mg-orange); border:2px solid var(--mg-offwhite); color:var(--mg-offwhite); }
-#mg-keys .mg-key.mg-key-off { opacity:var(--mg-key-dim); }
-#mg-bottom { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:.75em 1em 1em;
+  background:var(--mg-fg); color:var(--mg-fg); }   /* the ring is the key's own fill; ::before draws the inner circle over it, so the outline is whole */
+#mg-bottom { display:none;   /* shown during a game (see below) */
   --mg-icon-gap:10px;   /* the buttons' tap padding: each button has half of this either side */
   /* The gaps below are tuned so the visible white space between neighbouring shapes is the same (about 14.5px on average),
      because round and square icons look further apart than their boxes are. Numbers are the gap between the icon boxes. */
   --mg-gap-lives:7.8px; --mg-gap-point-metro:12.1px; --mg-gap-metro-midi:10.3px; }
 #mg-status { display:flex; flex-wrap:wrap; align-items:center; align-self:center; gap:4px 16px; text-align:left; }
-#mg-controls { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:0; margin-left:auto; margin-right:calc(var(--mg-icon-gap) / -2); }
-#mg-chances { display:flex; gap:.5em; align-items:center; color:var(--mg-fg); }
+#mg-controls { display:flex; flex-wrap:nowrap; justify-content:flex-end; gap:0; margin-left:auto; margin-right:calc(var(--mg-icon-gap) / -2); }
+#mg-chances { display:flex; gap:0; align-items:center; color:var(--mg-fg); }
 #mg-chanceIcons { display:flex; gap:var(--mg-gap-lives); align-items:center; }
 #mg-chances .mg-chance { width:var(--mg-icon-size, 35px); height:var(--mg-icon-size, 35px); }
 #mg-chances .mg-chance svg { width:100%; height:100%; display:block; }
 #mg-chances .mg-chance .mg-life-empty { display:none; }   /* a lost life swaps to the empty icon, it doesn't disappear */
 #mg-chances .mg-chance.mg-lost .mg-life-empty { display:block; }
 #mg-chances .mg-chance.mg-lost .mg-life-full { display:none; }
-#memgame button.mg-icon { background:none; border:0; padding:.7em calc(var(--mg-icon-gap) / 2); cursor:pointer; color:var(--mg-fg); transition:opacity .2s ease; }
+#memgame button.mg-icon { background:none; border:0; padding:.7em calc(var(--mg-icon-gap) / 2); cursor:pointer; color:var(--mg-fg); }
 #memgame button.mg-icon svg { display:block; height:var(--mg-icon-size, 35px); width:var(--mg-icon-size, 35px); }
-#memgame button.mg-icon[aria-pressed="false"], #memgame button.mg-icon:disabled, #memgame button.mg-icon[aria-disabled="true"] { opacity:.35; }
 #memgame button.mg-icon:disabled, #memgame button.mg-icon[aria-disabled="true"] { cursor:default; }
 #memgame button.mg-icon[aria-disabled="true"] { pointer-events:none; }   /* cycle, once shake is on: dimmed and not tappable */
 #memgame #mg-metro { margin-left:calc(var(--mg-gap-point-metro) - var(--mg-icon-gap)); }
@@ -165,25 +169,10 @@
 @font-face { font-family: 'BNRiley'; src: url(data:font/woff2;base64,PASTE_BASE64_HERE) format('woff2'); font-display: block; }
 #memgame { --mg-font-name: 'BNRiley', var(--mg-font); }
 */
-/* ============ 1-BIT LAYER: two tones only, hard pixel edges, stepped motion. Delete this whole block to get the smooth version back. ============ */
-#memgame {
-  --mg-font: 'Pixelify Sans', 'Courier New', ui-monospace, monospace;
-  --mg-px: 4px;                                          /* chunk size for the small things (pill corners); pads are drawn on a 20-cell grid by the script */
-  --mg-pad-fill: var(--mg-fg); --mg-pad-lit-fill: var(--mg-bg);   /* each theme is exactly two colours: light = off-white + orange, dark = orange + off-black */
-  --mg-pad-opacity: 1; --mg-pad-lit-filter: none;
-  --mg-icon-size: 35px;   /* every icon's box: the buttons, lives, legend, play and tap icons */
-  --mg-weight-key: 800; --mg-weight-h1: 800; --mg-weight-h2: 800; --mg-weight-h3: 800; font-weight: 800;
-  --mg-tile: calc(4 * var(--mg-dpx, 2px));                 /* one 4x4 Bayer dither tile; --mg-dpx (one dither dot) is set by the script from BLOCKS */
-  font-family: var(--mg-font); -webkit-font-smoothing: none; font-smooth: never; text-rendering: optimizeSpeed;
-}
-#memgame svg { shape-rendering: crispEdges; }
-#memgame button { font-weight: inherit; }
-#memgame .mg-pad { border-radius: 0; clip-path: var(--mg-pad-clip); }                        /* stepped circle, set by the script */
-#mg-play .mg-reel { clip-path: var(--mg-pad-clip); }
 /* Lit: the whole pad flips to the background colour and drops one cell onto its shadow, like a pressed button.
    Released: it dithers back in through three levels. */
 #memgame .mg-pad::before { content: ''; position: absolute; inset: 0; clip-path: var(--mg-pad-clip); background: var(--mg-pad-lit-fill); visibility: hidden; pointer-events: none; }
-#memgame .mg-pad::after { position: relative; z-index: 1; }
+#memgame .mg-pad::after { position: relative; z-index: 1; top: calc(var(--mg-cap-ty, 0) * 1em); left: calc(var(--mg-gx, 0) * 1em); }   /* the label's capitals centred in the pad, by the font's real metrics */
 #memgame .mg-pad.mg-lit::before { visibility: visible; }
 #memgame .mg-pad.mg-rel::before { visibility: visible; -webkit-mask: var(--mg-rel) 0 0 / var(--mg-tile) var(--mg-tile); mask: var(--mg-rel) 0 0 / var(--mg-tile) var(--mg-tile); }
 #memgame .mg-pad.mg-hi { color: var(--mg-pad-fill); }
@@ -193,34 +182,21 @@
   -webkit-mask: var(--mg-shadow-dither) 0 0 / var(--mg-tile) var(--mg-tile); mask: var(--mg-shadow-dither) 0 0 / var(--mg-tile) var(--mg-tile);
   translate: calc(var(--size, 96px) / var(--mg-cells, 20)) calc(var(--size, 96px) / var(--mg-cells, 20));
   transition: left .8s steps(10), top .8s steps(10); will-change: transform; animation: mg-drift var(--dur, 9s) steps(1, end) infinite; }
-#mg-play { isolation: isolate; }
 #mg-play::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--mg-fg); clip-path: var(--mg-pad-clip); pointer-events: none;
   -webkit-mask: var(--mg-shadow-dither) 0 0 / var(--mg-tile) var(--mg-tile); mask: var(--mg-shadow-dither) 0 0 / var(--mg-tile) var(--mg-tile);
   translate: calc(var(--size, 96px) / var(--mg-cells, 20)) calc(var(--size, 96px) / var(--mg-cells, 20)); }
-#memgame .mg-pad { transition: left .8s steps(10), top .8s steps(10); animation-timing-function: steps(1, end); }   /* hops between whole-pixel spots, no smooth fade */
-#mg-playgroup { transition: left .8s steps(10), top .8s steps(10); animation-timing-function: steps(1, end); }
-#mg-play .mg-reel { fill: var(--mg-fg); animation-timing-function: steps(12); }
-#memgame { --mg-notch: polygon(0 var(--mg-px), var(--mg-px) var(--mg-px), var(--mg-px) 0, calc(100% - var(--mg-px)) 0, calc(100% - var(--mg-px)) var(--mg-px), 100% var(--mg-px), 100% calc(100% - var(--mg-px)), calc(100% - var(--mg-px)) calc(100% - var(--mg-px)), calc(100% - var(--mg-px)) 100%, var(--mg-px) 100%, var(--mg-px) calc(100% - var(--mg-px)), 0 calc(100% - var(--mg-px))); }
 /* pills: a notched rectangle (two bars, so nothing clips the shadow) with a half-dithered shadow one chunk down and right */
-#memgame .mg-link, #mg-playgroup p, #mg-bottom { border-radius: 0; clip-path: none; position: relative; isolation: isolate;
+#memgame .mg-link, #mg-playgroup p, #mg-bottom { border-radius: 0; position: relative; isolation: isolate;
   background: linear-gradient(var(--mg-fg), var(--mg-fg)) 0 var(--mg-px) / 100% calc(100% - 2 * var(--mg-px)) no-repeat,
               linear-gradient(var(--mg-fg), var(--mg-fg)) var(--mg-px) 0 / calc(100% - 2 * var(--mg-px)) 100% no-repeat; }
 #memgame .mg-link::before, #mg-playgroup p::before, #mg-bottom::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--mg-fg); clip-path: var(--mg-notch); pointer-events: none;
   translate: var(--mg-px) var(--mg-px); -webkit-mask: var(--mg-shadow-dither) 0 0 / var(--mg-tile) var(--mg-tile); mask: var(--mg-shadow-dither) 0 0 / var(--mg-tile) var(--mg-tile); }
-#mg-wipe { background: transparent; color: var(--mg-fg); }   /* the overlay is drawn by the script, as dithered cells */
 #mg-wipe-canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; }
-#mg-wipe-text { position: relative; isolation: isolate; padding: .3em 1em; background: var(--mg-bg); clip-path: var(--mg-notch); }   /* the pill's border: this fill, with the inner pill drawn over it */
+#mg-wipe-text { position: relative; isolation: isolate; padding: calc(.3em + var(--mg-x-ty, 0) * 1em) 1em calc(.3em - var(--mg-x-ty, 0) * 1em); background: var(--mg-bg); clip-path: var(--mg-notch); }   /* the pill's border: this fill, with the inner pill drawn over it */
 #mg-wipe-text::before { content: ''; position: absolute; inset: var(--mg-px); z-index: -1; background: var(--mg-fg); clip-path: var(--mg-notch); }
-#mg-keys { --mg-key-dim: 1; }
 #memgame.mg-ingame #mg-keys { display: none; }   /* no keyboard reference during a game: the keys are on the pads */
-#mg-keys .mg-key { border-radius: 0; clip-path: var(--mg-key-clip); }
-#mg-keys .mg-white { background: var(--mg-fg); color: var(--mg-bg); }
-#mg-keys .mg-key { isolation: isolate; font-size: calc(var(--mg-key-size) * .4); }
-#mg-keys .mg-black { background: var(--mg-fg); border: 0; color: var(--mg-fg); }   /* the ring is the key's own fill; ::before draws the inner circle over it, so the outline is whole */
 #mg-keys .mg-black::before { content: ''; position: absolute; inset: calc(var(--mg-key-size) / var(--mg-key-cells, 14)); z-index: -1; clip-path: var(--mg-key-inner-clip); background: var(--mg-bg); }
-#memgame button.mg-icon { transition: none; }
-#memgame button.mg-icon[aria-pressed="false"], #memgame button.mg-icon:disabled, #memgame button.mg-icon[aria-disabled="true"], #mg-keys .mg-key.mg-key-off { opacity: 1; -webkit-mask: var(--mg-dim-dither) 0 0 / var(--mg-tile) var(--mg-tile); mask: var(--mg-dim-dither) 0 0 / var(--mg-tile) var(--mg-tile); }
-#mg-chances .mg-chance { transition: none; }
+#memgame button.mg-icon[aria-pressed="false"], #memgame button.mg-icon:disabled, #memgame button.mg-icon[aria-disabled="true"], #mg-keys .mg-key.mg-key-off { -webkit-mask: var(--mg-dim-dither) 0 0 / var(--mg-tile) var(--mg-tile); mask: var(--mg-dim-dither) 0 0 / var(--mg-tile) var(--mg-tile); }
 /* ---- the instagram link: bottom right, outside a game. Plain text and icon, no pill ---- */
 #memgame #mg-ig { position: absolute; right: 1em; bottom: calc(1em + env(safe-area-inset-bottom, 0px)); z-index: 1; display: inline-flex; align-items: center; gap: .1em;
   color: var(--mg-fg); font-family: var(--mg-font); font-size: var(--mg-size-nav); line-height: 1.2; text-decoration: none; white-space: nowrap; }
@@ -232,7 +208,6 @@
 #mg-tapicon svg { display: block; width: var(--mg-icon-size, 35px); height: var(--mg-icon-size, 35px); }
 @media (hover: none) and (pointer: coarse) { #memgame:not(.mg-ingame) #mg-tapicon { display: block; } }
 /* ---- loading animation (the script adds the classes and the element) ---- */
-#memgame { isolation: isolate; }
 #mg-intro-bg { display: none; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--mg-bg);
   --mg-intro-tile: calc(4 * var(--mg-ipx, 4px)); -webkit-mask: var(--mg-intro-dither) 0 0 / var(--mg-intro-tile) var(--mg-intro-tile); mask: var(--mg-intro-dither) 0 0 / var(--mg-intro-tile) var(--mg-intro-tile); }
 #memgame.mg-intro #mg-intro-bg { display: block; }
@@ -246,28 +221,22 @@
 @keyframes mg-bounce { 0% { transform: translateY(-3em); } 28% { transform: translateY(0); } 48% { transform: translateY(-1em); } 66% { transform: translateY(0); } 80% { transform: translateY(-.35em); } 92%, 100% { transform: translateY(0); } }
 .mg-bouncing { animation: mg-bounce .7s steps(5, end) both; }                                  /* a stepped bounce: it drops in and settles in hops */
 /* ---- the count-in: a huge numeral on top of everything in the game, but under the wipe (the script adds the element) ---- */
-#memgame { --mg-count-size: 100vh; }
 .mg-countwrap { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; overflow: hidden; z-index: 10; pointer-events: none;   /* above the pads, shadows and game bar; below the wipe (20) */ user-select: none; -webkit-user-select: none;
-  font-family: var(--mg-font); font-weight: 800; font-size: var(--mg-count-size); line-height: 1; color: var(--mg-fg);
+  font-family: var(--mg-font); font-weight: 400; font-size: var(--mg-count-size); line-height: 1; color: var(--mg-fg);
   -webkit-mask: var(--mg-count-dither) 0 0 / var(--mg-tile) var(--mg-tile); mask: var(--mg-count-dither) 0 0 / var(--mg-tile) var(--mg-tile); }   /* drawn as a Bayer dither, so it reads as a texture where it crosses pads */
 .mg-countwrap.mg-on { display: flex; }
 /* ---- the game bar: lives left, round in the middle, icons right, along the bottom, a little in from the sides ---- */
-#mg-bottom { display: none; }
 #memgame.mg-ingame #mg-bottom { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 4px; position: absolute; z-index: 5; left: 50%; transform: translateX(-50%);
   bottom: calc(1em + env(safe-area-inset-bottom, 0px)); width: min(500px, calc(100% - 2em)); box-sizing: border-box; padding: .5em .6em; }
 #mg-bottom #mg-status { justify-self: start; }
-#mg-bottom #mg-chances { gap: 0; }
-#mg-bottom #mg-controls { justify-self: end; flex-wrap: nowrap; }
+#mg-bottom #mg-controls { justify-self: end; }
 #mg-bottom #mg-round, #mg-bottom #mg-chances, #memgame #mg-bottom button.mg-icon { color: var(--mg-bg); }   /* off-white bar, orange icons and text (in dark mode: orange bar, black icons) */
-#memgame dialog { border-radius: 0; transition: transform .3s steps(6); }
-#memgame .mg-grab::before { border-radius: 0; }
-/* ================================================================================================================================== */
 </style>
 <div id="memgame">
 <div id="mg-top">
 <div id="mg-bankbar">
-<p id="mg-bankdisplay"></p>
 <button id="mg-cycle" class="mg-icon" aria-label="cycle sounds"><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path d="M29.1667 91.6668L12.5 75.0002L29.1667 58.3335L35 64.3752L28.5417 70.8335H70.8333V54.1668H79.1667V79.1668H28.5417L35 85.6252L29.1667 91.6668ZM20.8333 45.8335V20.8335H71.4583L65 14.3752L70.8333 8.3335L87.5 25.0002L70.8333 41.6668L65 35.6252L71.4583 29.1668H29.1667V45.8335H20.8333Z" fill="currentColor"/></svg></button>
+<p id="mg-bankdisplay"></p>
 </div>
 <nav id="mg-nav" aria-label="main">
 <button class="mg-link" id="mg-about-btn">about</button>
@@ -368,7 +337,6 @@
   const TIMING_PCT = 0.35;          // allowed timing error, as a share of the gap between notes
   const TIMING_MIN_MS = 50;         // but never tighter than this
   const RETRY_GAP_BEATS = 1.5;      // after a mistake, presses are ignored until the player has been quiet this long (in beats), so a pattern carried on after a slip can't restart itself by accident
-  const DEBUG = false;              // true = log every press and the pattern, to the console and a panel on screen
   const END_FADE_MS = 15;            // quick fade-out over the end of every sample, so it never stops on a click (0 = off)
   const SHAKE_THRESHOLD = 28;       // phone shake to change sounds: how hard a shake must be (lower = more sensitive; walking is well under 15)
   const SHAKE_COOLDOWN_MS = 900;    // ...and the least time between two shakes
@@ -379,30 +347,28 @@
   //   durations       allowed note values in beats (1 = 1/4, 0.5 = 1/8, 0.25 = 1/16);
   //                   list a value more than once to make it more likely
   //   minNotes / maxNotes   how many notes the bar contains
-  //   pitches         melodic banks: how many pads are in play (new pads appear)
-  //   drumWeights     drum banks: how often [kick, snare, hat, perc] are picked
-  //   accentChance    drum banks: how often kick/snare land on their beats
+  //   pads            how many of the bank's pads are in play (a new pad appears as the rounds rise); a bank with fewer samples uses them all
   // ---------------------------------------------------------------------
   const BAR_BEATS = 4;
   const LEVELS = [
-    { durations: [1, 1, 0.5],               minNotes: 4, maxNotes: 5,  pitches: 4, drumWeights: [3, 2, 3, 0], accentChance: 0.9 },
-    { durations: [1, 0.5, 0.5, 0.25],       minNotes: 5, maxNotes: 7,  pitches: 5, drumWeights: [3, 2, 3, 1], accentChance: 0.8 },
-    { durations: [1, 0.5, 0.5, 0.25, 0.25], minNotes: 7, maxNotes: 10, pitches: 6, drumWeights: [3, 2, 3, 2], accentChance: 0.7 }
+    { durations: [1, 1, 0.5],               minNotes: 4, maxNotes: 5,  pads: 4 },
+    { durations: [1, 0.5, 0.5, 0.25],       minNotes: 5, maxNotes: 7,  pads: 5 },
+    { durations: [1, 0.5, 0.5, 0.25, 0.25], minNotes: 7, maxNotes: 10, pads: 6 }
   ];
-  const DRUM_ACCENTS = { 0: 0, 1: 1, 2: 0, 3: 1 };  // beat in bar -> pad: kick on 1 & 3, snare on 2 & 4
 
   // ---------------------------------------------------------------------
   // SOUND BANKS: PASTE YOUR LINKS HERE
-  // Each bank = a title (shown to the player), a pattern type, sample links in pad order
-  // (pad 1, 2, 3...) and keys: the computer keyboard key for each sound, same order.
-  // Keys appear on the pads and trigger them. Use the piano layout (see KEYBOARD below):
-  //   a w s e d f t g y h u j k
-  // Optional bpm: the tempo for that bank. Patterns, the metronome and the midi export follow it
-  // (a bank with no bpm uses BPM above).
-  // Pattern types:
-  //   pattern: 'drums'    4 links: kick, snare, hat, perc. Always 4 pads.
-  //   pattern: 'melodic'  6 links. Pads appear as levels rise: 4, then 5, then 6.
-  //                       (a bank with no pattern is melodic)
+  // Every bank has the same shape, and files, keys and weights share one order: index 0 is the first sample,
+  // the first key and the first weight (and the first pad), index 1 the second of each, and so on.
+  //   title         shown to the player
+  //   files         the sample links. The first pads are in play first; more appear as the rounds rise (see LEVELS)
+  //   keys          the computer keyboard key for each sample, on the piano layout (see KEYBOARD below): a w s e d f t g y h u j k.
+  //                 Shown on the pads, and sets each pad's note in the midi export
+  //   weights       how likely each sample is to be picked: 3 is three times as likely as 1, and 0 is never
+  //   accents       the sample that lands on each beat of the bar: [beat 1, beat 2, beat 3, beat 4]. A sample's index, or null for none
+  //                 (e.g. [0, 1, 0, 1] with kick first and snare second: kick on 1 and 3, snare on 2 and 4). Whole beats only
+  //   accentChance  how often a note on an accented beat takes the accent, from 0 to 1. One number, or a list with one number per level
+  //   bpm           optional: the tempo for that bank. Patterns, the metronome and the midi export follow it (a bank with no bpm uses BPM above)
   // Use direct file links. For GitHub that means the "raw" form:
   //   https://raw.githubusercontent.com/YOUR-USER/YOUR-REPO/main/path/to/file.wav
   // (NOT the github.com/.../blob/... page link, which won't work.)
@@ -410,7 +376,8 @@
   // Every bank needs working links: pads play only your samples.
   // ---------------------------------------------------------------------
   const BANKS = [
-    { title: 'dust palace', pattern: 'drums', bpm: 120, keys: ['a', 's', 'd', 'f', 'g', 'h'], files: [
+    { title: 'dust palace', bpm: 120, keys: ['a', 's', 'd', 'f', 'g', 'h'],
+      weights: [3, 2, 3, 2, 1, 1], accents: [0, 1, 0, 1], accentChance: [0.9, 0.8, 0.7], files: [
       'https://mattdonald.github.io/memory/808Distort_Kick1.wav',
       'https://mattdonald.github.io/memory/808Distort_Snare1.wav',
       'https://mattdonald.github.io/memory/808Distort_Hat1.wav',
@@ -418,18 +385,21 @@
       'https://mattdonald.github.io/memory/808Spring_Clap1.wav',
       'https://mattdonald.github.io/memory/808Spring_Clave1.wav'
     ]},
-    { title: 'dust', pattern: 'drums', bpm: 100, keys: ['a', 's', 'd', 'f'], files: [
+    { title: 'dust', bpm: 100, keys: ['a', 's', 'd', 'f'],
+      weights: [3, 2, 3, 2], accents: [0, 1, 0, 1], accentChance: [0.9, 0.8, 0.7], files: [
       'https://mattdonald.github.io/memory/808Distort_Kick1.wav',
       'https://mattdonald.github.io/memory/808Distort_Snare1.wav',
       'https://mattdonald.github.io/memory/808Spring_Clap1.wav',
       'https://mattdonald.github.io/memory/808Spring_Clave1.wav'
     ]}
-    // , { name: 'bank 3', files: [ ... ] }
+    // , { title: 'bank 3', keys: [...], weights: [...], accents: [...], accentChance: 0.8, files: [ ... ] }
   ];
 
   // KEYBOARD: the piano-style layout (one octave, C up to the C above), key -> note name.
-  // Used for the keyboard reference and the pitches in the midi export (middle C = A).
+  // Used for the keyboard reference and the notes in the midi export: counting up from MIDI_ROOT in this order,
+  // a = C = 60, w = C# = 61, s = D = 62 and so on.
   const KEYBOARD = { a: 'C', w: 'C#', s: 'D', e: 'D#', d: 'E', f: 'F', t: 'F#', g: 'G', y: 'G#', h: 'A', u: 'A#', j: 'B', k: 'C (high)' };
+  const MIDI_ROOT = 60;             // the midi note of the first key on the KEYBOARD (60 = middle C)
   const DEFAULT_KEYS = ['a', 'd', 'g', 'k', 'h', 's'];   // used when a bank has no keys (C E G C A D)
 
   // Most pads on screen, and the most sounds a bank can have. Pad colours live in the css, in one place.
@@ -449,6 +419,7 @@
   const gameRoot = document.getElementById('memgame'), roundEl = document.getElementById('mg-round');
   const wipeEl = document.getElementById('mg-wipe'), wipeText = document.getElementById('mg-wipe-text');
   const tapScreen = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
+  const calm = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   const MSG_START = tapScreen ? 'tap to start' : 'press space to start';   // the idle message
   const MSG_PLAY = tapScreen ? 'tap to play' : 'press space to play';      // between rounds
   gameRoot.style.setProperty('--mg-msg-slot', tapScreen ? '10em' : '14em');   // room for the longest message (the desktop ones are longer)
@@ -506,7 +477,9 @@
     gameRoot.style.setProperty('--mg-pad-clip', padShape.poly); gameRoot.style.setProperty('--mg-cells', n);
   }
   const bayer = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];   // ordered-dither matrix: a pixel is on if its number is under the coverage
-  const bayerMask = k => { let d = ''; bayer.forEach((row, y) => row.forEach((v, x) => { if (v < k) d += 'M' + x + ' ' + y + 'h1v1h-1z'; })); return 'url("data:image/svg+xml,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4' shape-rendering='crispEdges'><path d='" + d + "'/></svg>") + '")'; };   // a 4x4 tile with k of its 16 dots on
+  const maskCache = {};
+  const bayerMask = k => maskCache[k] || (maskCache[k] = buildMask(k));
+  const buildMask = k => { let d = ''; bayer.forEach((row, y) => row.forEach((v, x) => { if (v < k) d += 'M' + x + ' ' + y + 'h1v1h-1z'; })); return 'url("data:image/svg+xml,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4' shape-rendering='crispEdges'><path d='" + d + "'/></svg>") + '")'; };   // a 4x4 tile with k of its 16 dots on
   const releaseMasks = RELEASE_LEVELS.map(bayerMask);
   gameRoot.style.setProperty('--mg-shadow-dither', bayerMask(SHADOW_LEVEL)); gameRoot.style.setProperty('--mg-dim-dither', bayerMask(DIM_LEVEL)); gameRoot.style.setProperty('--mg-count-dither', bayerMask(COUNT_LEVEL));
   gameRoot.style.setProperty('--mg-dpx', B.dither + 'px'); gameRoot.style.setProperty('--mg-px', B.pill + 'px');
@@ -514,7 +487,7 @@
   // ---- loading animation ----
   // The page starts off-white with the name in orange. Orange dithers in over 16 Bayer steps. Once there is more orange than off-white (step 9) the name flips to off-white
   // and the tagline appears. Then the pads slide in one by one from the left and right, each nav button and the bank bounce in, and last the keyboard, one key at a time. Skipped for reduced motion.
-  if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+  if (!calm) {
     const introEl = document.createElement('div'); introEl.id = 'mg-intro-bg'; gameRoot.insertBefore(introEl, gameRoot.firstChild);
     const introMasks = Array.from({ length: 17 }, (_, k) => bayerMask(k));
     const introSet = k => gameRoot.style.setProperty('--mg-intro-dither', introMasks[k]);
@@ -565,22 +538,6 @@
     });
   }
 
-  // ---- debug: what was pressed vs what the pattern wants ----
-  const mgLog = [];
-  const dbgEl = DEBUG ? Object.assign(document.createElement('div'), { id: 'mg-debug' }) : null;
-  if (dbgEl) {
-    dbgEl.style.cssText = 'position:absolute;left:0;top:0;z-index:30;width:min(100%,38em);max-height:55%;overflow:hidden;box-sizing:border-box;padding:6px 8px;background:rgba(0,0,0,.78);color:#9fef9f;font:11px/1.35 ui-monospace,Menlo,monospace;white-space:pre-wrap;pointer-events:none;text-align:left;';
-    gameRoot.appendChild(dbgEl); window.mgLog = mgLog;
-  }
-  function dbg() {
-    if (!DEBUG) return;
-    const line = (performance.now() / 1000).toFixed(2).padStart(7) + '  ' + Array.prototype.join.call(arguments, ' ');
-    mgLog.push(line); if (mgLog.length > 600) mgLog.shift();
-    console.log('[mg]', line); dbgEl.textContent = mgLog.slice(-16).join('\n');
-  }
-  const padName = i => i === undefined ? '-' : 'pad' + (i + 1) + '(' + ((keysFor(currentBank)[i] || '?').toUpperCase()) + ')';
-  dbg('debug on. touch screen:', tapScreen, '| in the console, copy(mgLog.join("\\n")) copies the whole log');
-
   let ctx = null;
   let melody = [], rhythm = [], pos = 0, lastPress = 0, armed = true, holdUntil = 0;
   let mistakes = 0, round = 0, showVisual = true;   // pad flashing is on by default
@@ -593,7 +550,7 @@
   const pads = Array.from({ length: MAX_PADS }, (_, i) => {
     const b = document.createElement('button');
     b.className = 'mg-pad';
-    b.addEventListener('pointerdown', () => onPad(i, 'tap'));
+    b.addEventListener('pointerdown', () => onPad(i));
     const sh = document.createElement('i'); sh.className = 'mg-shadow'; padsEl.appendChild(sh); b._shadow = sh;   // a dithered drop shadow under each pad
     padsEl.appendChild(b);
     return b;
@@ -665,8 +622,10 @@
   }
 
   // ---- midi export: the last pattern played, as a one-bar .mid file ----
+  // Every pad is a note, and the bank's keys array says which: pad i plays file i and has key i, and a key's note counts up
+  // from MIDI_ROOT in the KEYBOARD's order (a = C = 60, w = C# = 61, s = D = 62 ...).
   let exportPattern = null;
-  const DRUM_MIDI = [36, 38, 42, 39];   // general midi drums: kick, snare, closed hat, clap (channel 10)
+  const KEYBOARD_KEYS = Object.keys(KEYBOARD);
 
   function vlq(n) {                     // midi variable-length number
     const b = [n & 0x7f];
@@ -674,20 +633,18 @@
     return b;
   }
 
-  function midiNote(key, pad) {         // melodic pads: the key's note, middle C (60) = A
-    const n = Object.keys(KEYBOARD).indexOf((key || '').toLowerCase());
-    return 60 + (n < 0 ? pad : n);
+  function midiNote(key, pad) {
+    const n = KEYBOARD_KEYS.indexOf((key || '').toLowerCase());
+    return MIDI_ROOT + (n < 0 ? pad : n);   // a key that isn't on the KEYBOARD falls back to its pad's position
   }
 
   function buildMidi(pat) {
-    const PPQ = 480, ch = pat.drums ? 9 : 0, events = [];
+    const PPQ = 480, events = [];
     let tick = 0;
     pat.melody.forEach((pad, k) => {
-      const len = Math.round(pat.rhythm[k] * PPQ);
-      const note = pat.drums ? DRUM_MIDI[pad] : midiNote(pat.keys[pad], pad);
-      const dur = pat.drums ? Math.min(len, PPQ / 4) : len;   // drum hits stay short
-      events.push({ t: tick, on: 1, b: [0x90 | ch, note, 100] });
-      events.push({ t: tick + dur, on: 0, b: [0x80 | ch, note, 0] });
+      const len = Math.round(pat.rhythm[k] * PPQ), note = midiNote(pat.keys[pad], pad);
+      events.push({ t: tick, on: 1, b: [0x90, note, 100] });
+      events.push({ t: tick + len, on: 0, b: [0x80, note, 0] });
       tick += len;
     });
     events.sort((a, b) => a.t - b.t || a.on - b.on);              // note-offs before note-ons
@@ -715,7 +672,7 @@
 
   function downloadMidi() {
     if (!exportPattern) return;
-    saveBytes(buildMidi(exportPattern), `${exportPattern.drums ? 'beat' : 'melody'}-${exportPattern.tempo}bpm.mid`, 'audio/midi');
+    saveBytes(buildMidi(exportPattern), `pattern-${exportPattern.tempo}bpm.mid`, 'audio/midi');
   }
 
 
@@ -736,6 +693,7 @@
       p.removeAttribute('title');
       p.setAttribute('aria-label', 'pad ' + (i + 1) + (k ? ', key ' + k : ''));
     });
+    centreGlyphs();
     updateKeyboard();
   }
 
@@ -750,8 +708,8 @@
       return;
     }
     const i = keysFor(currentBank).findIndex(k => k && k.toLowerCase() === e.key.toLowerCase());
-    if (i === -1 || pads[i].style.display === 'none') { if (e.key.length === 1) dbg('key "' + e.key + '" plays no pad (state ' + state + ')'); return; }
-    onPad(i, 'key "' + e.key + '"');
+    if (i === -1 || pads[i].style.display === 'none') return;
+    onPad(i);
   }, { signal });
 
   const stageEl = document.getElementById('mg-stage');
@@ -768,6 +726,27 @@
 
   const padSizes = {};   // pad size per window size: it stays the same on a bank swap or a new round
 
+  // ---- letters centred in their shapes ----
+  // A font's letters rarely sit in the middle of the line they are laid out in. Once the real font is in, measure it, then nudge capitals
+  // (key and pad labels) so their cap height is centred, and lowercase (the pills) so the x-height is. The css reads --mg-cap-ty and --mg-x-ty
+  // (em, down is positive) and each label's --mg-gx (em, right is positive: centres the ink, not the advance width, so a letter's side gaps balance).
+  let glyphMetrics = { cap: 0, x: 0 }, glyphCtx = null;
+  function centreGlyphs() {
+    try {
+      const c = glyphCtx || (glyphCtx = document.createElement('canvas').getContext('2d')), S = 200;
+      c.font = '400 ' + S + 'px ' + getComputedStyle(gameRoot).fontFamily; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+      const H = c.measureText('H');
+      if (H.fontBoundingBoxAscent === undefined) return;   // an old browser: the font's plain metrics stay
+      const ty = h => (h - H.fontBoundingBoxAscent + H.fontBoundingBoxDescent) / S / 2;   // how far down a glyph of height h must move to be centred in its line
+      glyphMetrics = { cap: ty(H.actualBoundingBoxAscent), x: ty(c.measureText('x').actualBoundingBoxAscent) };
+      gameRoot.style.setProperty('--mg-cap-ty', glyphMetrics.cap.toFixed(4));
+      gameRoot.style.setProperty('--mg-x-ty', glyphMetrics.x.toFixed(4));
+      const gx = el => { const ch = (el.dataset.key || '').toUpperCase(); if (!ch) return; const m = c.measureText(ch); el.style.setProperty('--mg-gx', ((m.width - (m.actualBoundingBoxRight - m.actualBoundingBoxLeft)) / 2 / S).toFixed(4)); };
+      pads.forEach(gx);
+      gameRoot.querySelectorAll('#mg-keys .mg-key').forEach(gx);
+    } catch (e) { /* the letters stay where the font puts them */ }
+  }
+
   function alignLink(force) {   // lines the instagram link up with what shares its row: the letters of the keyboard (desktop), or the tap icon (touch)
     const ig = document.getElementById('mg-ig');
     if ((gameRoot.classList.contains('mg-preload') && !force) || gameRoot.classList.contains('mg-ingame') || !ig.getBoundingClientRect().width) return;   // hidden, or mid-animation (the intro aligns it with force, before anything moves)
@@ -777,12 +756,16 @@
       want = mid(tap.querySelector('svg').getBoundingClientRect()); have = mid(ig.querySelector('svg').getBoundingClientRect());
     } else if (key && key.getBoundingClientRect().width && document.createRange) {   // desktop: the link's letters on the same centre line as a bottom-row key's letter
       const text = node => { const rg = document.createRange(); rg.selectNodeContents(node); return rg.getBoundingClientRect ? mid(rg.getBoundingClientRect()) : NaN; };
-      want = text(key); have = text(ig.firstChild);
+      want = mid(key.getBoundingClientRect()); have = text(ig.firstChild) - glyphMetrics.x * parseFloat(getComputedStyle(ig).fontSize);   // the key circle's centre, and the link's x-height centre
     }
     if (want == null || have == null || isNaN(want) || isNaN(have) || Math.abs(have - want) < 0.5) return;
     ig.style.bottom = (gameRoot.getBoundingClientRect().bottom - ig.getBoundingClientRect().bottom + (have - want)) + 'px';   // bottom is measured up from the screen's edge
   }
-  if (document.fonts) document.fonts.ready.then(alignLink);   // letter positions change once the real font is in
+  if (document.fonts) {   // letter positions change once the real font is in
+    const fontIn = () => { centreGlyphs(); alignLink(); };
+    document.fonts.ready.then(fontIn);
+    if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', fontIn);   // the font can arrive after 'ready' (a slow stylesheet)
+  }
   function scatterPads() {    // new random spots for the play group and every pad; pads never overlap each other
     alignLink();
     const W = stageEl.clientWidth, H = stageEl.clientHeight;
@@ -818,7 +801,7 @@
         for (let t = 0; t < 800 && found < 8; t++) {      // take the first 8 spots that fit and keep the one nearest its neighbours: tight, but different every time
           const x = rand(W - size), y = rand(H - size), cx = x + size / 2, cy = y + size / 2;
           const nx = Math.min(Math.max(cx, g.x), g.x + gw), ny = Math.min(Math.max(cy, g.y), g.y + gh);
-          const kd = extra.length ? Math.min(...extra.map(R => Math.hypot(cx - Math.min(Math.max(cx, R.x), R.x + R.w), cy - Math.min(Math.max(cy, R.y), R.y + R.h)))) : Infinity;   // distance to the keyboard / round counter
+          let kd = Infinity; for (const R of extra) kd = Math.min(kd, Math.hypot(cx - Math.min(Math.max(cx, R.x), R.x + R.w), cy - Math.min(Math.max(cy, R.y), R.y + R.h)));   // distance to the keyboard / round counter
           const dg = Math.hypot(cx - nx, cy - ny) - size / 2;   // gap to the play group
           if (dg < slack || kd < size / 2 + slack || !pts.every(q => Math.hypot(q.x - x, q.y - y) >= size + slack)) continue;
           found++;
@@ -870,7 +853,7 @@
   }
 
   function layoutPads(count) { pads.forEach((p, i) => { p.style.display = i < count ? '' : 'none'; p._shadow.style.display = p.style.display; }); updateKeyboard(); }
-  function idleCount() {      // pads shown outside a game: one for every sound in the bank (a game still uses 4 for drums, or the level's pitches)
+  function idleCount() {      // pads shown outside a game: one for every sound in the bank (a game uses the level's pads)
     if (currentBank === null) return 4;
     return Math.min(MAX_PADS, BANKS[currentBank].files.length);
   }
@@ -917,7 +900,6 @@
 
   // ---- the game: idle -> round entry -> play ... -> next round, or back to idle ----
   const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const wipeCanvas = document.createElement('canvas'); wipeCanvas.id = 'mg-wipe-canvas'; wipeEl.insertBefore(wipeCanvas, wipeText);
   function sweep(from, to) {                       // a dithered dissolve, top to bottom, drawn in coarse steps on a grid of B.wipe px
@@ -928,19 +910,19 @@
     const cols = Math.ceil(wipeEl.clientWidth / B.wipe), rows = Math.ceil(wipeEl.clientHeight / B.wipe);
     wipeCanvas.width = cols; wipeCanvas.height = rows;
     const rgb = (/(\d+)\D+(\d+)\D+(\d+)/.exec(getComputedStyle(wipeEl).color) || [0, 0, 0, 0]).slice(1, 4).map(Number);
-    const img = c2.createImageData(cols, rows), frames = calm ? 1 : Math.max(2, Math.round(ms / 45)), R = 0.6;   // R = how soft the dithered edge is
+    const img = c2.createImageData(cols, rows), px = new Uint32Array(img.data.buffer), solid = new Uint32Array(new Uint8Array([rgb[0], rgb[1], rgb[2], 255]).buffer)[0], frames = calm ? 1 : Math.max(2, Math.round(ms / 45)), R = 0.6;   // R = how soft the dithered edge is
     const keyIn = new Float32Array(cols * rows), keyOut = new Float32Array(cols * rows);   // per cell: the moment (in sweep time) it switches on / off, from its place on screen and its Bayer threshold
     for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
       const i = y * cols + x, xn = (y / rows) * 0.85 + (x / cols) * 0.15, thr = (bayer[y & 3][x & 3] + 0.5) / 16;   // mostly top to bottom, a little left to right
       keyIn[i] = xn + thr * R; keyOut[i] = xn + (1 - thr) * R;
-      img.data[i * 4] = rgb[0]; img.data[i * 4 + 1] = rgb[1]; img.data[i * 4 + 2] = rgb[2];
     }
     const key = goingIn ? keyIn : keyOut;
     return new Promise(done => {
       let f = 0;
       (function draw() {
         const edge = Math.min(1, f / frames) * (1 + R);
-        for (let i = 0, n = cols * rows; i < n; i++) img.data[i * 4 + 3] = (goingIn ? edge > key[i] : edge < key[i]) ? 255 : 0;
+        if (goingIn) for (let i = 0, n = px.length; i < n; i++) px[i] = edge > key[i] ? solid : 0;
+        else for (let i = 0, n = px.length; i < n; i++) px[i] = edge < key[i] ? solid : 0;
         c2.putImageData(img, 0, 0);
         if (f++ >= frames) { if (goingIn) wipeText.style.visibility = 'visible'; done(); } else setTimeout(draw, 45);
       })();
@@ -1024,32 +1006,37 @@
     return n;
   }
 
+  function padWeights(bank, count) {   // the bank's weights for the pads in play: a missing weight counts as 1, and all-zero counts as all 1
+    const w = Array.from({ length: count }, (_, i) => { const v = Number(bank && bank.weights && bank.weights[i]); return isNaN(v) || v < 0 ? 1 : v; });
+    return w.some(v => v > 0) ? w : w.map(() => 1);
+  }
+
+  function accentChance(bank) {        // a number, or one per level
+    const a = bank && bank.accentChance;
+    return (Array.isArray(a) ? a[Math.min(round % LEVELS.length, a.length - 1)] : a) || 0;
+  }
+
   function newMelody() {
     const oldTempo = tempo;
     currentBank = pickBank();   // new round, new random bank
     tempo = bankTempo(currentBank);
     if (metroRunning && tempo !== oldTempo) { stopMetro(); startMetro(); }   // metronome follows the new tempo
-    const lv = LEVELS[round % LEVELS.length];
-    const drums = currentBank !== null && BANKS[currentBank].pattern === 'drums';
+    const lv = LEVELS[round % LEVELS.length], bank = currentBank !== null ? BANKS[currentBank] : null;
+    const count = Math.max(1, bank ? Math.min(lv.pads, bank.files.length) : lv.pads);   // pads in play this round
+    const weights = padWeights(bank, count), accents = (bank && bank.accents) || [], chance = accentChance(bank);
     rhythm = makeRhythm(lv); melody = [];
-    let beat = 0;               // position in the bar, so drum accents land on beats
-    rhythm.forEach((d, k) => {
-      let n;
-      if (drums) {
-        const accent = DRUM_ACCENTS[beat % BAR_BEATS];
-        if (k === 0) n = 0;                                            // always start on the kick
-        else if (accent !== undefined && Math.random() < lv.accentChance) n = accent;
-        else n = pickPad(lv.drumWeights, melody, 2);
-      } else {
-        n = pickPad(new Array(lv.pitches).fill(1), melody, 2);
-      }
-      melody.push(n); beat += d;
+    let beat = 0;               // position in the bar, so accents land on beats
+    rhythm.forEach(d => {
+      const accent = Number.isInteger(beat) ? accents[beat % BAR_BEATS] : null;   // accents sit on whole beats only
+      melody.push(Number.isInteger(accent) && accent < count && Math.random() < chance ? accent : pickPad(weights, melody, 2));
+      beat += d;
     });
-    // melodic: make sure the newest pad is used at least once
-    if (!drums && lv.pitches > 4 && !melody.includes(lv.pitches - 1)) {
-      melody[Math.floor(Math.random() * melody.length)] = lv.pitches - 1;
+    // once there are more pads than the first round's, make sure the newest one is used at least once (unless its weight is 0)
+    const newest = count - 1;
+    if (count > LEVELS[0].pads && weights[newest] > 0 && !melody.includes(newest)) {
+      melody[Math.floor(Math.random() * melody.length)] = newest;
     }
-    layoutPads(drums ? 4 : lv.pitches);
+    layoutPads(count);
     labelPads(); showBank();
     scatterPads();   // new round, new locations
   }
@@ -1057,20 +1044,14 @@
   function playMelody(replay) {   // replay = hear the same melody again mid-round
     exportPattern = {             // remember what's being played, for 'generate midi'
       melody: melody.slice(), rhythm: rhythm.slice(),
-      drums: currentBank !== null && BANKS[currentBank].pattern === 'drums',
       keys: keysFor(currentBank).slice(), tempo
     };
     midiBtn.disabled = false;
-    dbg(replay ? 'REPLAY' : 'NEW PATTERN', '| round', round + 1, '| bank', currentBank === null ? '-' : bankTitle(currentBank), '| tempo', tempo, '| metronome', metroRunning);
-    dbg('  notes:', melody.map(padName).join(' '));
-    dbg('  beats:', rhythm.join(' '));
     pos = 0; holdUntil = 0; if (!replay) armed = true; state = 'playback';
     setGameRunning(true); setPads(false); playBtn.classList.add('mg-spinning');   // the reel turns while the pattern plays
     say('listen…');   // the whole way through, count-in included: the count itself is drawn huge behind the pads
     ensureBank(currentBank).then(() => {
       const beatMs = 60000 / tempo, c = getCtx();
-      const bufs = bankBuffers[currentBank] || [];
-      dbg('  samples:', pads.map((p, i) => p.style.display === 'none' ? null : 'pad' + (i + 1) + '=' + String((BANKS[currentBank].files[i] || '?')).split('/').pop() + (bufs[i] ? '' : ' MISSING')).filter(Boolean).join(' '), '| audio', c.state, 'latency', Math.round((c.baseLatency || 0) * 1000) + 'ms');
       // a one-bar count (1 2 3 4) before the pattern, starting on beat 1 of the metronome's bar, or straight away if the metronome is off
       const first = metroRunning ? nextDownbeat(c.currentTime + 0.05) : c.currentTime + 0.1;
       let t = (first - c.currentTime) * 1000;
@@ -1079,11 +1060,10 @@
       setTimeout(() => setCount(0), t);           // the pattern starts here: the count clears
       melody.forEach((n, k) => {
         const ms = rhythm[k] * beatMs;
-        setTimeout(() => { tone(n); dbg('  play', (k + 1) + '/' + melody.length, padName(n)); if (showVisual) flash(n, Math.min(180, ms * 0.5), true); }, t);
+        setTimeout(() => { tone(n); if (showVisual) flash(n, Math.min(180, ms * 0.5)); }, t);
         t += ms;
       });
       setTimeout(() => {
-        dbg('  your turn: pads live, expecting note 1', padName(melody[0]));
         setCount(0); state = 'input'; setPads(true); playBtn.disabled = false; playBtn.classList.remove('mg-spinning');   // play = hear it again; the reel stops
         say('your turn');
       }, t);
@@ -1101,40 +1081,31 @@
 
   const retryGap = () => RETRY_GAP_BEATS * 60000 / tempo;
   function fail(text) {
-  holdUntil = performance.now() + retryGap();
-    if (!armed) {   // a mistake was just counted: no more count until a correct note is played
-      pos = 0;   // no penalty, current message stays
-      dbg('  (no life lost: no correct note since the last mistake)');
-      return;
-    }
+    holdUntil = performance.now() + retryGap();
+    if (!armed) { pos = 0; return; }   // a mistake was just counted: no more count until a correct note is played (no penalty, current message stays)
     armed = false;
     mistakes++;
-    dbg('  life lost:', mistakes + '/' + MAX_MISTAKES, '| back to note 1');
     showChances();
     if (mistakes >= MAX_MISTAKES) return gameOver();
     pos = 0;
     say(text, 'try again');   // 'wrong note!' or 'wrong rhythm!', then 'try again' after 2 seconds
   }
 
-  function onPad(i, src) {
-    if (state === 'playback' || state === 'transition') { dbg('ignored', padName(i), src, '(state ' + state + ')'); return; }
+  function onPad(i) {
+    if (state === 'playback' || state === 'transition') return;
     tone(i); flash(i);
-    if (state !== 'input') { dbg('free play', padName(i), src, '(state ' + state + ')'); return; }
+    if (state !== 'input') return;
     const now = performance.now();
-    if (now < holdUntil) { dbg('ignored', padName(i), src, '(locked after a mistake: pause ' + Math.round(retryGap()) + 'ms, then restart)'); holdUntil = now + retryGap(); return; }   // still playing on after a slip: wait for a pause, then start again from the top
-    const want = melody[pos], where = (pos + 1) + '/' + melody.length;
-    if (i !== want) { dbg('X WRONG NOTE  pressed', padName(i), src, '| wanted', padName(want), 'at note', where, '| armed', armed); return fail('wrong note!'); }
-    let gapInfo = '';
-    if (pos > 0) {
+    if (now < holdUntil) { holdUntil = now + retryGap(); return; }   // still playing on after a slip: wait for a pause, then start again from the top
+    if (i !== melody[pos]) return fail('wrong note!');
+    if (pos > 0 && JUDGE_RHYTHM) {
       const gap = now - lastPress, expected = rhythm[pos - 1] * 60000 / tempo, tol = Math.max(TIMING_MIN_MS, expected * TIMING_PCT);
-      gapInfo = '| gap ' + Math.round(gap) + 'ms, wanted ' + Math.round(expected) + ' +-' + Math.round(tol);
-      if (JUDGE_RHYTHM && Math.abs(gap - expected) > tol) { dbg('X WRONG RHYTHM  right note', padName(i), src, 'at note', where, gapInfo, '| off by', Math.round(gap - expected) + 'ms'); return fail('wrong rhythm!'); }
+      if (Math.abs(gap - expected) > tol) return fail('wrong rhythm!');
     }
-    dbg('ok', padName(i), src, 'note', where, gapInfo);
     lastPress = now;
     armed = true;
     pos++;
-    if (pos === melody.length) { dbg('pattern complete'); roundWon(); }
+    if (pos === melody.length) roundWon();
   }
 
   // ---- free play: cycle banks ----
@@ -1179,7 +1150,7 @@
     if (lastAcc) {
       const d = Math.abs(a.x - lastAcc.x) + Math.abs(a.y - lastAcc.y) + Math.abs(a.z - lastAcc.z);   // how sharply the phone's acceleration just changed
       if (d > SHAKE_THRESHOLD && now - lastShake > SHAKE_COOLDOWN_MS && state === 'idle' && !document.querySelector('#memgame dialog[open]')) {
-        lastShake = now; dbg('shake', Math.round(d));
+        lastShake = now;
         cycleSounds();
       }
     }
@@ -1201,7 +1172,6 @@
     shake = 'pending';
     if (typeof DeviceMotionEvent.requestPermission !== 'function') return enableShake();
     DeviceMotionEvent.requestPermission().then(r => {
-      dbg('motion permission', r);
       if (r === 'granted') enableShake(); else { shake = 'failed'; setCycleIcon(ICON_CYCLE_DESKTOP); cycleSounds(); }   // declined: the button cycles, starting with this tap
     }).catch(() => { shake = 'failed'; setCycleIcon(ICON_CYCLE_DESKTOP); cycleSounds(); });
   }
@@ -1219,7 +1189,15 @@
   currentBank = pickBank();   // start on a random bank, so one is always showing
   tempo = bankTempo(currentBank);
   layoutPads(idleCount()); labelPads(); showBank(); showChances(); scatterPads();
-  const relayout = () => { if (state === 'idle' || state === 'ready') scatterPads(); };
+  let lastW = stageEl.clientWidth, lastH = stageEl.clientHeight, relayoutTimer = 0;
+  const relayout = () => {
+    if (stageEl.clientWidth === lastW && stageEl.clientHeight === lastH) return;   // the observer's first call, or a no-op
+    clearTimeout(relayoutTimer);
+    relayoutTimer = setTimeout(() => {
+      lastW = stageEl.clientWidth; lastH = stageEl.clientHeight;
+      if (state === 'idle' || state === 'ready') scatterPads();
+    }, 120);
+  };
   const ro = window.ResizeObserver ? new ResizeObserver(relayout) : null;   // follows the widget's size
   if (ro) ro.observe(stageEl); else window.addEventListener('resize', relayout, { signal });
   const firstBank = currentBank;   // load this one straight away, then the others
@@ -1320,7 +1298,7 @@
 
   // ---- reveal: where a pad covers the name, the word shows through in the pad's opposite colour ----
   // an off-white pad shows the word in orange; a lit (orange) pad shows it in off-white. Mid-fade, both show in proportion.
-  let alive = true, lastMask = '', lastMask2 = '';
+  let alive = true, lastSig = '';
   const nameEl = document.getElementById('mg-name'), beforeBottom = document.getElementById('mg-bottom');
   const makeReveal = id => { const c = nameEl.cloneNode(true); c.id = id; c.setAttribute('aria-hidden', 'true'); nameEl.parentNode.insertBefore(c, beforeBottom); return c; };
   const rev = makeReveal('mg-name-rev'), rev2 = makeReveal('mg-name-rev2');
@@ -1329,7 +1307,6 @@
   stageEl.parentNode.insertBefore(countEl, stageEl);
   function setCount(n) { countEl.textContent = n || ''; countEl.classList.toggle('mg-on', !!n); }
   const setMask = (el, m) => { if (el._m !== m) { el._m = m; el.style.webkitMask = m; el.style.mask = m; } };
-  const rootEl = document.getElementById('memgame');
   function litness(p) { return p._lvl || 0; }   // 1 lit .. 0 at rest, from the Bayer level the pad is at (the play circle never lights)
   (function updateReveal() {
     if (!alive || !rev.isConnected) return;
@@ -1338,19 +1315,23 @@
     const nr = rev.getBoundingClientRect();
     const k = rev.offsetWidth / nr.width || 1;                 // allows for any scaling around the widget
     const resting = [], lit = [];
+    let sig = padShape.mask.length + ':';
     pads.concat(playBtn).forEach(p => {   // the play circle is a pad too
       if (p.style.display === 'none') return;
       const r = p.getBoundingClientRect();
-      const d = Math.round(r.width * k), x = Math.round((r.left - nr.left) * k), y = Math.round((r.top - nr.top) * k);
-      (litness(p) >= 0.5 ? lit : resting).push(padShape.mask + ' ' + x + 'px ' + y + 'px / ' + d + 'px ' + d + 'px no-repeat');   // 1-bit: lit or not, no in-between
+      const d = Math.round(r.width * k), x = Math.round((r.left - nr.left) * k), y = Math.round((r.top - nr.top) * k), isLit = litness(p) >= 0.5;   // 1-bit: lit or not, no in-between
+      sig += d + ',' + x + ',' + y + (isLit ? 'L' : 'r') + ';';
+      (isLit ? lit : resting).push([x, y, d]);
     });
+    if (sig === lastSig) return requestAnimationFrame(updateReveal);   // nothing moved, nothing lit: the masks are already right
+    lastSig = sig;
     const none = 'linear-gradient(transparent, transparent)';   // 'none' would show the whole word
-    const m1 = resting.join(',') || none, m2 = lit.join(',') || none;
-    setMask(rev, m1); setMask(rev2, m2);
+    const build = list => list.map(([x, y, d]) => padShape.mask + ' ' + x + 'px ' + y + 'px / ' + d + 'px ' + d + 'px no-repeat').join(',') || none;
+    setMask(rev, build(resting)); setMask(rev2, build(lit));
     requestAnimationFrame(updateReveal);
   })();
 
-  return function destroy() { alive = false; stopMetro(); ac.abort(); if (ro) ro.disconnect(); try { if (ctx) ctx.close(); } catch (err) {} };
+  return function destroy() { alive = false; clearTimeout(relayoutTimer); stopMetro(); ac.abort(); if (ro) ro.disconnect(); try { if (ctx) ctx.close(); } catch (err) {} };
   }
   // The Code widget may add the html and the script separately, so wait for the game's container.
   var tries = 0;
